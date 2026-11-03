@@ -1,10 +1,14 @@
 package io.github.sachachtrl.matchppl;
 
 import io.github.sachachtrl.matchppl.discord.ActivityListener;
+import io.github.sachachtrl.matchppl.discord.MatchListener;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 import io.github.sachachtrl.matchppl.repository.Database;
+import io.github.sachachtrl.matchppl.repository.ProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteActivityRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
 import io.github.sachachtrl.matchppl.service.ActivityService;
+import io.github.sachachtrl.matchppl.service.ProfileService;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import java.sql.SQLException;
@@ -36,11 +40,17 @@ public class Main {
         ActivityRepository activityRepo = new SqliteActivityRepository(database);
         ActivityService activityService = new ActivityService(activityRepo);
         ActivityListener activityListener = new ActivityListener(activityService);
+        ProfileRepository profileRepo = new SqliteProfileRepository(database);
+        ProfileService profileService = new ProfileService(profileRepo);
+        MatchListener matchListener = new MatchListener(profileService);
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
-                .addEventListeners(activityListener);
+                .addEventListeners(activityListener, matchListener);
         try {
             JDA bot = builder.build();
             bot.awaitReady();
+            bot.updateCommands()
+                    .addCommands(MatchListener.command())
+                    .queue();
             log.info("Bot is logged in as {}", bot.getSelfUser().getAsTag());
         } catch (InvalidTokenException e) {
             log.error("Invalid token: {}", e.getMessage());
