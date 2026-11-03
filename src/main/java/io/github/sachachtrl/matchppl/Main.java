@@ -3,6 +3,10 @@ package io.github.sachachtrl.matchppl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.github.cdimascio.dotenv.Dotenv;
+import io.github.sachachtrl.matchppl.discord.ActivityListener;
+import io.github.sachachtrl.matchppl.repository.ActivityRepository;
+import io.github.sachachtrl.matchppl.repository.InMemoryActivityRepository;
+import io.github.sachachtrl.matchppl.service.ActivityService;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
@@ -18,7 +22,11 @@ public class Main {
             log.error("No token");
             System.exit(1);
         }
-        JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES);
+        ActivityRepository activityRepo = new InMemoryActivityRepository();
+        ActivityService activityService = new ActivityService(activityRepo);
+        ActivityListener activityListener = new ActivityListener(activityService);
+        JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
+                .addEventListeners(activityListener);
         try {
             JDA bot = builder.build();
             bot.awaitReady();
