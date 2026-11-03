@@ -1,10 +1,10 @@
 package io.github.sachachtrl.matchppl.service;
 
+import io.github.sachachtrl.matchppl.repository.ActivityRepository;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-
-import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 
 public class ActivityService {
     private final ActivityRepository activityRepo;

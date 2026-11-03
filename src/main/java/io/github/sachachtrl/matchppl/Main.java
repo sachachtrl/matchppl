@@ -1,16 +1,17 @@
 package io.github.sachachtrl.matchppl;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import io.github.cdimascio.dotenv.Dotenv;
 import io.github.sachachtrl.matchppl.discord.ActivityListener;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 import io.github.sachachtrl.matchppl.repository.InMemoryActivityRepository;
 import io.github.sachachtrl.matchppl.service.ActivityService;
+
+import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);

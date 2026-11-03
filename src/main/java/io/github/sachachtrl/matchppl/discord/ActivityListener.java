@@ -1,11 +1,12 @@
 package io.github.sachachtrl.matchppl.discord;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import io.github.sachachtrl.matchppl.service.ActivityService;
+
 import java.time.Instant;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ActivityListener extends ListenerAdapter {
     private static final Logger log = LoggerFactory.getLogger(ActivityListener.class);
