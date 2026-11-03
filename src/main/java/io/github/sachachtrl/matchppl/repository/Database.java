@@ -32,6 +32,13 @@ public class Database implements AutoCloseable {
                         PRIMARY KEY (guild_id, user_id)
                     )
                     """);
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS guild_admin_role (
+                        guild_id INTEGER NOT NULL,
+                        role_id  INTEGER NOT NULL,
+                        PRIMARY KEY (guild_id, role_id)
+                    )
+                    """);
         }
     }
 

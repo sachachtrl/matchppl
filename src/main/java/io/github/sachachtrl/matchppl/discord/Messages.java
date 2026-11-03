@@ -18,4 +18,8 @@ public final class Messages {
                 ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_DEFAULT)
         ).getString(key);
     }
+
+    public static String format(Locale locale, String key, Object... args) {
+        return String.format(locale, get(locale, key), args);
+    }
 }
