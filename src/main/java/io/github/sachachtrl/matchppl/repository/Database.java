@@ -24,6 +24,14 @@ public class Database implements AutoCloseable {
                         PRIMARY KEY (guild_id, user_id, day)
                     )
                     """);
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS profile (
+                        guild_id  INTEGER NOT NULL,
+                        user_id   INTEGER NOT NULL,
+                        searching INTEGER NOT NULL DEFAULT 0,
+                        PRIMARY KEY (guild_id, user_id)
+                    )
+                    """);
         }
     }
 
