@@ -25,30 +25,34 @@ public class SqliteActivityRepository implements ActivityRepository {
     }
 
     @Override
-    public synchronized void incrementMessageCount(long guildId, long userId, LocalDate day) {
-        try (PreparedStatement statement = this.connection.prepareStatement(INCREMENT_SQL)) {
-            statement.setLong(1, guildId);
-            statement.setLong(2, userId);
-            statement.setString(3, day.toString());
-            statement.executeUpdate();
-        } catch (SQLException e) {
-            throw new RepositoryException("Failed to increment message count", e);
+    public void incrementMessageCount(long guildId, long userId, LocalDate day) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(INCREMENT_SQL)) {
+                statement.setLong(1, guildId);
+                statement.setLong(2, userId);
+                statement.setString(3, day.toString());
+                statement.executeUpdate();
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to increment message count", e);
+            }
         }
     }
 
     @Override
-    public synchronized int countMessages(long guildId, long userId, LocalDate from, LocalDate to) {
-        try (PreparedStatement statement = this.connection.prepareStatement(COUNT_SQL)) {
-            statement.setLong(1, guildId);
-            statement.setLong(2, userId);
-            statement.setString(3, from.toString());
-            statement.setString(4, to.toString());
-            try (ResultSet result = statement.executeQuery()) {
-                result.next();
-                return result.getInt(1);
+    public int countMessages(long guildId, long userId, LocalDate from, LocalDate to) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(COUNT_SQL)) {
+                statement.setLong(1, guildId);
+                statement.setLong(2, userId);
+                statement.setString(3, from.toString());
+                statement.setString(4, to.toString());
+                try (ResultSet result = statement.executeQuery()) {
+                    result.next();
+                    return result.getInt(1);
+                }
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to count messages", e);
             }
-        } catch (SQLException e) {
-            throw new RepositoryException("Failed to count messages", e);
         }
     }
 }
