@@ -2,10 +2,12 @@ package io.github.sachachtrl.matchppl;
 
 import io.github.sachachtrl.matchppl.discord.ActivityListener;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
-import io.github.sachachtrl.matchppl.repository.InMemoryActivityRepository;
+import io.github.sachachtrl.matchppl.repository.Database;
+import io.github.sachachtrl.matchppl.repository.SqliteActivityRepository;
 import io.github.sachachtrl.matchppl.service.ActivityService;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import java.sql.SQLException;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
@@ -23,7 +25,15 @@ public class Main {
             log.error("No token");
             System.exit(1);
         }
-        ActivityRepository activityRepo = new InMemoryActivityRepository();
+        Database database;
+        try {
+            database = new Database("jdbc:sqlite:matchppl.db");
+        } catch (SQLException e) {
+            log.error("Cannot open database : {}", e.getMessage());
+            System.exit(1);
+            return;
+        }
+        ActivityRepository activityRepo = new SqliteActivityRepository(database);
         ActivityService activityService = new ActivityService(activityRepo);
         ActivityListener activityListener = new ActivityListener(activityService);
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
