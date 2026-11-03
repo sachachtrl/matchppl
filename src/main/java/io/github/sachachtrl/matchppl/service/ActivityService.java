@@ -14,6 +14,6 @@ public class ActivityService {
     }
 
     public void recordMessage(long guildId, long userId, Instant sentAt) {
-        activityRepo.incrementMessageCount(guildId, userId, LocalDate.ofInstant(sentAt, ZoneOffset.UTC));
+        this.activityRepo.incrementMessageCount(guildId, userId, LocalDate.ofInstant(sentAt, ZoneOffset.UTC));
     }
 }

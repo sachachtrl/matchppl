@@ -10,10 +10,10 @@ public class ProfileService {
     }
 
     public boolean isSearching(long guildId, long userId) {
-        return profileRepo.isSearching(guildId, userId);
+        return this.profileRepo.isSearching(guildId, userId);
     }
 
     public void setSearching(long guildId, long userId, boolean searching) {
-        profileRepo.setSearching(guildId, userId, searching);
+        this.profileRepo.setSearching(guildId, userId, searching);
     }
 }

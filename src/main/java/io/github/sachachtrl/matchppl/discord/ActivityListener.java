@@ -26,6 +26,6 @@ public class ActivityListener extends ListenerAdapter {
         long authorId = event.getAuthor().getIdLong();
         Instant instant = event.getMessage().getTimeCreated().toInstant();
         this.activityService.recordMessage(guildId, authorId, instant);
-        log.debug("Message counted : guild={}, user={}, at={}", guildId, authorId, instant);
+        log.debug("Message counted: guild={}, user={}, at={}", guildId, authorId, instant);
     }
 }

@@ -29,7 +29,7 @@ public class Main {
         try {
             database = new Database("jdbc:sqlite:matchppl.db");
         } catch (SQLException e) {
-            log.error("Cannot open database : {}", e.getMessage());
+            log.error("Cannot open database: {}", e.getMessage());
             System.exit(1);
             return;
         }
@@ -43,7 +43,7 @@ public class Main {
             bot.awaitReady();
             log.info("Bot is logged in as {}", bot.getSelfUser().getAsTag());
         } catch (InvalidTokenException e) {
-            log.error("Invalid token : {}", e.getMessage());
+            log.error("Invalid token: {}", e.getMessage());
             System.exit(1);
         }
     }
