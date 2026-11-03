@@ -15,7 +15,7 @@ public class ActivityListener extends ListenerAdapter {
 
     public ActivityListener(ActivityService activityService) {
         this.activityService = activityService;
-    }   
+    }
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
