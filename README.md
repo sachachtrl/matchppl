@@ -35,7 +35,7 @@ What the matching is *for* is up to each server — finding teammates, planning 
 ### Planned
 
 - **Tag management** — list the server's tags, edit them with the same card used at creation, and delete them after confirmation.
-- **Profiles** (`/userconfig`) — chosen tags, a short introduction, required tags, minimum compatibility, anonymity.
+- **Profiles in `/match`** — a single card to manage everything: a short introduction with live preview, chosen tags, excluded tags (never be matched with someone who has them), anonymous mode, and advanced settings such as required tags and minimum compatibility.
 - **Matching** — the score is the number of shared tags divided by the larger tag count, so it is identical on both sides. The best available score is always proposed first.
 - **Double-blind proposals** — sent privately to both members at once, with *Skip* and *Accept* buttons and a response deadline. A refusal is indistinguishable from no answer.
 - **Temporary channels** — a private text and voice channel for each mutual match, deleted when its lifetime ends.
