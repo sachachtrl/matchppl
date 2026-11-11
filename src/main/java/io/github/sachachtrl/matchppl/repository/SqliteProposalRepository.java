@@ -43,10 +43,15 @@ public class SqliteProposalRepository implements ProposalRepository {
             SELECT second_user_id FROM proposal
             WHERE guild_id = ? AND status = 'OPEN' AND second_answer IN ('PENDING', 'ACCEPTED')
             """;
+    private static final String WHERE_BLOCKING = """
+            WHERE guild_id = ? AND (
+                status = 'NO_MATCH'
+                OR (status = 'OPEN' AND (first_answer IN ('SKIPPED', 'CANCELLED')
+                                         OR second_answer IN ('SKIPPED', 'CANCELLED'))))
+            """;
     private static final String FIND_BLOCKED_SQL = """
             SELECT first_user_id, second_user_id FROM proposal
-            WHERE guild_id = ? AND status = 'NO_MATCH'
-            """;
+            """ + WHERE_BLOCKING;
     private static final String UPDATE_FIRST_ANSWER_SQL = """
             UPDATE proposal SET first_answer = ?
             WHERE id = ? AND status = 'OPEN' AND first_user_id = ? AND first_answer = ?

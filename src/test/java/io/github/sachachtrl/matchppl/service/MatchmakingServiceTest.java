@@ -131,4 +131,17 @@ class MatchmakingServiceTest {
 
         assertTrue(this.round(Set.of(ALICE, BOB)).isEmpty());
     }
+
+    @Test
+    void aSkippedPairIsNotProposedAgainBeforeTheDeadlineWhenBothAreFree() {
+        this.startSearching(ALICE);
+        this.startSearching(BOB);
+        Proposal proposal = this.round(Set.of(ALICE, BOB)).getFirst();
+        this.proposalService.answer(proposal.id(), ALICE, ProposalService.Action.SKIP);
+        this.proposalService.answer(proposal.id(), BOB, ProposalService.Action.ACCEPT);
+        this.proposalService.answer(proposal.id(), BOB, ProposalService.Action.CANCEL);
+        this.clock.advance(Duration.ofMinutes(1));
+
+        assertTrue(this.round(Set.of(ALICE, BOB)).isEmpty());
+    }
 }
