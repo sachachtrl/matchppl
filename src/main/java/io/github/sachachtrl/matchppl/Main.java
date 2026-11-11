@@ -20,15 +20,20 @@ import io.github.sachachtrl.matchppl.service.TagService;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import java.sql.SQLException;
+import java.time.Duration;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import okhttp3.OkHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
+
+    private static final Duration HTTP_PING_INTERVAL = Duration.ofSeconds(15);
+    private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(10);
 
     public void main() throws InterruptedException {
         Dotenv env = Dotenv.configure().ignoreIfMissing().load();
@@ -58,9 +63,11 @@ public class Main {
         TagService tagService = new TagService(tagRepo);
         TagListener tagListener = new TagListener(tagService, guildConfigService);
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
+                .setHttpClientBuilder(new OkHttpClient.Builder().pingInterval(HTTP_PING_INTERVAL))
                 .addEventListeners(activityListener, matchListener, adminListener, tagListener);
         try {
             JDA bot = builder.build();
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(bot, database)));
             bot.awaitReady();
             bot.updateCommands()
                     .addCommands(
@@ -75,5 +82,23 @@ public class Main {
             log.error("Invalid token: {}", e.getMessage());
             System.exit(1);
         }
+    }
+
+    private static void shutdown(JDA bot, Database database) {
+        log.info("Shutting down");
+        bot.shutdown();
+        try {
+            if (!bot.awaitShutdown(SHUTDOWN_TIMEOUT)) {
+                bot.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        try {
+            database.close();
+        } catch (SQLException e) {
+            log.error("Cannot close database: {}", e.getMessage());
+        }
+        log.info("Bot stopped");
     }
 }
