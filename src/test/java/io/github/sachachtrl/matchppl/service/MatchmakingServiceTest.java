@@ -1,5 +1,6 @@
 package io.github.sachachtrl.matchppl.service;
 
+import io.github.sachachtrl.matchppl.model.GuildSettings;
 import io.github.sachachtrl.matchppl.model.MemberSnapshot;
 import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.model.Tag;
@@ -84,7 +85,7 @@ class MatchmakingServiceTest {
         List<Proposal> created = this.round(Set.of(ALICE, BOB));
 
         assertEquals(1, created.size());
-        assertEquals(START.plus(GuildConfigService.DEFAULT_RESPONSE_DELAY), created.getFirst().deadline());
+        assertEquals(START.plus(GuildSettings.DEFAULT_RESPONSE_DELAY), created.getFirst().deadline());
     }
 
     @Test
@@ -126,7 +127,7 @@ class MatchmakingServiceTest {
         Proposal proposal = this.round(Set.of(ALICE, BOB)).getFirst();
         this.proposalService.answer(proposal.id(), ALICE, ProposalService.Action.SKIP);
 
-        this.clock.advance(GuildConfigService.DEFAULT_RESPONSE_DELAY);
+        this.clock.advance(GuildSettings.DEFAULT_RESPONSE_DELAY);
         this.proposalService.expireDue();
 
         assertTrue(this.round(Set.of(ALICE, BOB)).isEmpty());

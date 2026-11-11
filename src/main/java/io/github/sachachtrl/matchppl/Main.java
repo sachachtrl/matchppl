@@ -2,6 +2,7 @@ package io.github.sachachtrl.matchppl;
 
 import io.github.sachachtrl.matchppl.discord.ActivityListener;
 import io.github.sachachtrl.matchppl.discord.AdminListener;
+import io.github.sachachtrl.matchppl.discord.ConfigListener;
 import io.github.sachachtrl.matchppl.discord.InteractionTimer;
 import io.github.sachachtrl.matchppl.discord.MatchListener;
 import io.github.sachachtrl.matchppl.discord.MemberListener;
@@ -90,6 +91,7 @@ public class Main {
         GuildConfigRepository guildConfigRepo = new SqliteGuildConfigRepository(database);
         GuildConfigService guildConfigService = new GuildConfigService(guildConfigRepo);
         AdminListener adminListener = new AdminListener(guildConfigService);
+        ConfigListener configListener = new ConfigListener(guildConfigService);
 
         TagRepository tagRepo = new SqliteTagRepository(database);
         TagService tagService = new TagService(tagRepo, conditionChecker);
@@ -117,7 +119,7 @@ public class Main {
                 .setHttpClientBuilder(new OkHttpClient.Builder().pingInterval(HTTP_PING_INTERVAL))
                 .addEventListeners(interactionTimer.arrivalListener())
                 .addEventListeners(activityListener, matchListener, adminListener, tagListener, proposalListener,
-                        memberListener, resetListener)
+                        memberListener, resetListener, configListener)
                 .addEventListeners(interactionTimer.completionListener());
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
             Thread thread = new Thread(runnable, "matchmaking");
@@ -137,7 +139,8 @@ public class Main {
                             TagListener.newTagCommand(),
                             TagListener.tagsCommand(),
                             ResetListener.resetCommand(),
-                            ResetListener.resetAllCommand())
+                            ResetListener.resetAllCommand(),
+                            ConfigListener.command())
                     .queue();
             scheduler.scheduleAtFixedRate(new MatchmakingTask(bot, proposalService, matchmakingService, messenger),
                     FIRST_ROUND_DELAY_SECONDS, ROUND_PERIOD_SECONDS, TimeUnit.SECONDS);

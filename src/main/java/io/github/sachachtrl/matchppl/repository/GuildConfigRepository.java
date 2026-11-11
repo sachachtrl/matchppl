@@ -1,5 +1,7 @@
 package io.github.sachachtrl.matchppl.repository;
 
+import io.github.sachachtrl.matchppl.model.GuildSettings;
+
 import java.util.Set;
 
 public interface GuildConfigRepository {
@@ -8,4 +10,8 @@ public interface GuildConfigRepository {
     boolean removeAdminRole(long guildId, long roleId);
 
     Set<Long> findAdminRoles(long guildId);
+
+    GuildSettings findSettings(long guildId);
+
+    void saveSettings(GuildSettings settings);
 }

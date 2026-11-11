@@ -53,6 +53,18 @@ public class Database implements AutoCloseable {
                     )
                     """);
             statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS guild_settings (
+                        guild_id                  INTEGER PRIMARY KEY,
+                        response_delay_minutes    INTEGER NOT NULL,
+                        matching_interval_minutes INTEGER NOT NULL,
+                        rooms_enabled             INTEGER NOT NULL,
+                        room_lifetime_minutes     INTEGER NOT NULL,
+                        room_prefix               TEXT    NOT NULL,
+                        category_id               INTEGER,
+                        log_channel_id            INTEGER
+                    )
+                    """);
+            statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS tag (
                         id                   INTEGER PRIMARY KEY AUTOINCREMENT,
                         guild_id             INTEGER NOT NULL,
