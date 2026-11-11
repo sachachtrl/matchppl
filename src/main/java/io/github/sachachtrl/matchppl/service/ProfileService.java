@@ -45,6 +45,13 @@ public class ProfileService {
         return true;
     }
 
+    public void restartWaiting(long guildId, long userId) {
+        Profile profile = this.profileRepo.find(guildId, userId);
+        if (profile.searching()) {
+            this.profileRepo.save(profile.withSearching(true, this.clock.instant()));
+        }
+    }
+
     public boolean setPresentation(long guildId, long userId, String text) {
         String trimmed = text == null ? "" : text.strip();
         if (trimmed.length() > MAX_PRESENTATION_LENGTH) {

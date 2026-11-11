@@ -2,10 +2,14 @@ package io.github.sachachtrl.matchppl.service;
 
 import io.github.sachachtrl.matchppl.repository.GuildConfigRepository;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Set;
 
 public class GuildConfigService {
+    public static final Duration DEFAULT_RESPONSE_DELAY = Duration.ofHours(24);
+    public static final Duration DEFAULT_ROOM_LIFETIME = Duration.ofHours(24);
+
     private final GuildConfigRepository guildConfigRepo;
 
     public GuildConfigService(GuildConfigRepository guildConfigRepo) {
@@ -18,6 +22,14 @@ public class GuildConfigService {
 
     public boolean removeAdminRole(long guildId, long roleId) {
         return this.guildConfigRepo.removeAdminRole(guildId, roleId);
+    }
+
+    public Duration responseDelay(long guildId) {
+        return DEFAULT_RESPONSE_DELAY;
+    }
+
+    public Duration roomLifetime(long guildId) {
+        return DEFAULT_ROOM_LIFETIME;
     }
 
     public Set<Long> listAdminRoles(long guildId) {

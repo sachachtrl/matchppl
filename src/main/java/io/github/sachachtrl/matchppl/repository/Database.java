@@ -67,6 +67,24 @@ public class Database implements AutoCloseable {
                     )
                     """);
             statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS proposal (
+                        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                        guild_id          INTEGER NOT NULL,
+                        first_user_id     INTEGER NOT NULL,
+                        second_user_id    INTEGER NOT NULL,
+                        created_at        INTEGER NOT NULL,
+                        deadline          INTEGER NOT NULL,
+                        first_answer      TEXT    NOT NULL,
+                        second_answer     TEXT    NOT NULL,
+                        status            TEXT    NOT NULL,
+                        first_message_id  INTEGER,
+                        second_message_id INTEGER
+                    )
+                    """);
+            statement.executeUpdate("""
+                    CREATE INDEX IF NOT EXISTS proposal_by_status ON proposal (guild_id, status)
+                    """);
+            statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS tag_role (
                         tag_id  INTEGER NOT NULL,
                         role_id INTEGER NOT NULL,
