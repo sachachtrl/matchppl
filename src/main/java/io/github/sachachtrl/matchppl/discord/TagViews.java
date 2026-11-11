@@ -1,6 +1,5 @@
 package io.github.sachachtrl.matchppl.discord;
 
-import io.github.sachachtrl.matchppl.model.ActivityPeriod;
 import io.github.sachachtrl.matchppl.model.Tag;
 
 import java.util.ArrayList;
@@ -145,24 +144,14 @@ final class TagViews {
     }
 
     private static String shortConditions(Tag tag, Locale locale) {
-        List<String> parts = new ArrayList<>();
-        if (tag.minAccountAgeDays() != null) {
-            parts.add(Messages.format(locale, "tag.short.age", tag.minAccountAgeDays()));
-        }
-        if (tag.minMemberDays() != null) {
-            parts.add(Messages.format(locale, "tag.short.seniority", tag.minMemberDays()));
-        }
-        if (tag.minMessages() != null) {
-            parts.add(Messages.format(locale, "tag.short.activity", tag.minMessages(),
-                    periodText(tag.activityPeriod(), locale)));
-        }
+        List<String> parts = new ArrayList<>(ConditionTexts.shortParts(tag.conditions(), locale));
         if (!tag.requiredRoleIds().isEmpty()) {
             parts.add(Messages.format(locale, "tag.short.required", tag.requiredRoleIds().size()));
         }
         if (!tag.forbiddenRoleIds().isEmpty()) {
             parts.add(Messages.format(locale, "tag.short.forbidden", tag.forbiddenRoleIds().size()));
         }
-        return parts.isEmpty() ? Messages.get(locale, "tag.short.none") : String.join(" · ", parts);
+        return ConditionTexts.shortSummary(parts, locale);
     }
 
     private static Section conditionSection(String action, Tag tag, String title, String value, Locale locale) {
@@ -184,26 +173,15 @@ final class TagViews {
     }
 
     private static String ageText(Tag tag, Locale locale) {
-        return tag.minAccountAgeDays() == null
-                ? Messages.get(locale, "tag.no_minimum")
-                : Messages.format(locale, "tag.age.value", tag.minAccountAgeDays());
+        return ConditionTexts.ageText(tag.conditions(), locale);
     }
 
     private static String seniorityText(Tag tag, Locale locale) {
-        return tag.minMemberDays() == null
-                ? Messages.get(locale, "tag.no_minimum")
-                : Messages.format(locale, "tag.seniority.value", tag.minMemberDays());
+        return ConditionTexts.seniorityText(tag.conditions(), locale);
     }
 
     private static String activityText(Tag tag, Locale locale) {
-        if (tag.minMessages() == null) {
-            return Messages.get(locale, "tag.no_minimum");
-        }
-        return Messages.format(locale, "tag.activity.value", tag.minMessages(), periodText(tag.activityPeriod(), locale));
-    }
-
-    static String periodText(ActivityPeriod period, Locale locale) {
-        return Messages.get(locale, "tag.period." + period.name().toLowerCase(Locale.ROOT));
+        return ConditionTexts.activityText(tag.conditions(), locale);
     }
 
     private static String rolesText(Set<Long> roleIds, Locale locale) {

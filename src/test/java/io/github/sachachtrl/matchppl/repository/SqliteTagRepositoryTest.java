@@ -1,6 +1,7 @@
 package io.github.sachachtrl.matchppl.repository;
 
 import io.github.sachachtrl.matchppl.model.ActivityPeriod;
+import io.github.sachachtrl.matchppl.model.MemberConditions;
 import io.github.sachachtrl.matchppl.model.Tag;
 
 import java.sql.SQLException;
@@ -40,10 +41,10 @@ class SqliteTagRepositoryTest {
         Tag found = this.repository.findById(GUILD, created.id()).orElseThrow();
         assertEquals("Fortnite", found.name());
         assertEquals("🎮", found.emoji());
-        assertNull(found.minAccountAgeDays());
-        assertNull(found.minMemberDays());
-        assertNull(found.minMessages());
-        assertNull(found.activityPeriod());
+        assertNull(found.conditions().minAccountAgeDays());
+        assertNull(found.conditions().minMemberDays());
+        assertNull(found.conditions().minMessages());
+        assertNull(found.conditions().activityPeriod());
         assertTrue(found.requiredRoleIds().isEmpty());
         assertTrue(found.forbiddenRoleIds().isEmpty());
     }
@@ -70,16 +71,14 @@ class SqliteTagRepositoryTest {
         Tag created = this.repository.create(GUILD, "Fortnite", "🎮");
 
         this.repository.update(created
-                .withMinAccountAgeDays(30)
-                .withMinMemberDays(7)
-                .withActivity(20, ActivityPeriod.TWO_WEEKS)
+                .withConditions(new MemberConditions(30, 7, 20, ActivityPeriod.TWO_WEEKS))
                 .withRoles(Set.of(100L, 101L), Set.of(200L)));
 
         Tag found = this.repository.findById(GUILD, created.id()).orElseThrow();
-        assertEquals(30, found.minAccountAgeDays());
-        assertEquals(7, found.minMemberDays());
-        assertEquals(20, found.minMessages());
-        assertEquals(ActivityPeriod.TWO_WEEKS, found.activityPeriod());
+        assertEquals(30, found.conditions().minAccountAgeDays());
+        assertEquals(7, found.conditions().minMemberDays());
+        assertEquals(20, found.conditions().minMessages());
+        assertEquals(ActivityPeriod.TWO_WEEKS, found.conditions().activityPeriod());
         assertEquals(Set.of(100L, 101L), found.requiredRoleIds());
         assertEquals(Set.of(200L), found.forbiddenRoleIds());
     }

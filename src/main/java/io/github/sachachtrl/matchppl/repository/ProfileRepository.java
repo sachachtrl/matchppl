@@ -1,6 +1,9 @@
 package io.github.sachachtrl.matchppl.repository;
 
+import io.github.sachachtrl.matchppl.model.Profile;
+
 public interface ProfileRepository {
-    boolean isSearching(long guildId, long userId);
-    void setSearching(long guildId, long userId, boolean searching);
+    Profile find(long guildId, long userId);
+
+    void save(Profile profile);
 }

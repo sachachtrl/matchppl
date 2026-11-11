@@ -1,6 +1,7 @@
 package io.github.sachachtrl.matchppl.service;
 
 import io.github.sachachtrl.matchppl.model.ActivityPeriod;
+import io.github.sachachtrl.matchppl.model.MemberSnapshot;
 import io.github.sachachtrl.matchppl.model.Tag;
 import io.github.sachachtrl.matchppl.repository.TagRepository;
 
@@ -12,7 +13,6 @@ import java.util.function.UnaryOperator;
 
 public class TagService {
     public static final int MAX_NAME_LENGTH = 32;
-    public static final ActivityPeriod DEFAULT_ACTIVITY_PERIOD = ActivityPeriod.THIRTY_DAYS;
 
     public sealed interface CreateResult permits Created, NameTaken, InvalidName {}
 
@@ -23,9 +23,11 @@ public class TagService {
     public record InvalidName() implements CreateResult {}
 
     private final TagRepository tagRepo;
+    private final ConditionChecker conditionChecker;
 
-    public TagService(TagRepository tagRepo) {
+    public TagService(TagRepository tagRepo, ConditionChecker conditionChecker) {
         this.tagRepo = tagRepo;
+        this.conditionChecker = conditionChecker;
     }
 
     public CreateResult createTag(long guildId, String name, String emoji) {
@@ -47,22 +49,34 @@ public class TagService {
         return this.tagRepo.findByGuild(guildId);
     }
 
+    public List<Tag> usableTags(MemberSnapshot member) {
+        return this.listTags(member.guildId()).stream().filter(tag -> this.canUse(tag, member)).toList();
+    }
+
+    public boolean canUse(Tag tag, MemberSnapshot member) {
+        boolean hasRequiredRole = tag.requiredRoleIds().isEmpty()
+                || tag.requiredRoleIds().stream().anyMatch(member.roleIds()::contains);
+        boolean hasForbiddenRole = tag.forbiddenRoleIds().stream().anyMatch(member.roleIds()::contains);
+        return hasRequiredRole && !hasForbiddenRole && this.conditionChecker.meets(tag.conditions(), member);
+    }
+
     public boolean deleteTag(long guildId, long tagId) {
         return this.tagRepo.delete(guildId, tagId);
     }
 
     public Optional<Tag> setMinAccountAge(long guildId, long tagId, Integer days) {
-        return this.update(guildId, tagId, tag -> tag.withMinAccountAgeDays(positiveOrNull(days)));
+        return this.update(guildId, tagId,
+                tag -> tag.withConditions(ConditionRules.withMinAccountAge(tag.conditions(), days)));
     }
 
     public Optional<Tag> setMinMemberDays(long guildId, long tagId, Integer days) {
-        return this.update(guildId, tagId, tag -> tag.withMinMemberDays(positiveOrNull(days)));
+        return this.update(guildId, tagId,
+                tag -> tag.withConditions(ConditionRules.withMinMemberDays(tag.conditions(), days)));
     }
 
     public Optional<Tag> setActivity(long guildId, long tagId, Integer messages, ActivityPeriod period) {
-        Integer minMessages = positiveOrNull(messages);
-        ActivityPeriod activityPeriod = minMessages == null ? null : (period == null ? DEFAULT_ACTIVITY_PERIOD : period);
-        return this.update(guildId, tagId, tag -> tag.withActivity(minMessages, activityPeriod));
+        return this.update(guildId, tagId,
+                tag -> tag.withConditions(ConditionRules.withActivity(tag.conditions(), messages, period)));
     }
 
     public Optional<Tag> setRequiredRoles(long guildId, long tagId, Set<Long> roleIds) {
@@ -82,12 +96,8 @@ public class TagService {
                 });
     }
 
-    private static Integer positiveOrNull(Integer value) {
-        return value == null || value <= 0 ? null : value;
-    }
-
-    private static Set<Long> without(Set<Long> roleIds, Set<Long> removed) {
-        Set<Long> result = new HashSet<>(roleIds);
+    static Set<Long> without(Set<Long> ids, Set<Long> removed) {
+        Set<Long> result = new HashSet<>(ids);
         result.removeAll(removed);
         return result;
     }

@@ -1,6 +1,7 @@
 package io.github.sachachtrl.matchppl.repository;
 
 import io.github.sachachtrl.matchppl.model.ActivityPeriod;
+import io.github.sachachtrl.matchppl.model.MemberConditions;
 import io.github.sachachtrl.matchppl.model.Tag;
 
 import java.sql.Connection;
@@ -56,6 +57,9 @@ public class SqliteTagRepository implements TagRepository {
     private static final String INSERT_ROLE_SQL = """
             INSERT INTO tag_role (tag_id, role_id, kind) VALUES (?, ?, ?)
             """;
+    private static final String REMOVE_FROM_PROFILES_SQL = """
+            DELETE FROM profile_tag WHERE guild_id = ? AND tag_id = ?
+            """;
 
     private final Connection connection;
 
@@ -73,7 +77,7 @@ public class SqliteTagRepository implements TagRepository {
                 statement.setString(4, emoji);
                 try (ResultSet result = statement.executeQuery()) {
                     result.next();
-                    return new Tag(result.getLong(1), guildId, name, emoji, null, null, null, null, Set.of(), Set.of());
+                    return new Tag(result.getLong(1), guildId, name, emoji, MemberConditions.NONE, Set.of(), Set.of());
                 }
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to create tag", e);
@@ -159,6 +163,7 @@ public class SqliteTagRepository implements TagRepository {
                     boolean deleted = this.deleteTagRow(guildId, tagId);
                     if (deleted) {
                         this.deleteRoles(tagId);
+                        this.removeFromProfiles(guildId, tagId);
                     }
                     this.connection.commit();
                     return deleted;
@@ -180,17 +185,12 @@ public class SqliteTagRepository implements TagRepository {
         Set<Long> required = new HashSet<>();
         Set<Long> forbidden = new HashSet<>();
         this.loadRoles(tagId, required, forbidden);
-        return new Tag(
-                tagId,
-                guildId,
-                result.getString(2),
-                result.getString(3),
+        MemberConditions conditions = new MemberConditions(
                 getNullableInt(result, 4),
                 getNullableInt(result, 5),
                 getNullableInt(result, 6),
-                period == null ? null : ActivityPeriod.valueOf(period),
-                required,
-                forbidden);
+                period == null ? null : ActivityPeriod.valueOf(period));
+        return new Tag(tagId, guildId, result.getString(2), result.getString(3), conditions, required, forbidden);
     }
 
     private void loadRoles(long tagId, Set<Long> required, Set<Long> forbidden) throws SQLException {
@@ -211,10 +211,11 @@ public class SqliteTagRepository implements TagRepository {
 
     private void updateConditions(Tag tag) throws SQLException {
         try (PreparedStatement statement = this.connection.prepareStatement(UPDATE_SQL)) {
-            setNullableInt(statement, 1, tag.minAccountAgeDays());
-            setNullableInt(statement, 2, tag.minMemberDays());
-            setNullableInt(statement, 3, tag.minMessages());
-            statement.setString(4, tag.activityPeriod() == null ? null : tag.activityPeriod().name());
+            MemberConditions conditions = tag.conditions();
+            setNullableInt(statement, 1, conditions.minAccountAgeDays());
+            setNullableInt(statement, 2, conditions.minMemberDays());
+            setNullableInt(statement, 3, conditions.minMessages());
+            statement.setString(4, conditions.activityPeriod() == null ? null : conditions.activityPeriod().name());
             statement.setLong(5, tag.id());
             statement.setLong(6, tag.guildId());
             statement.executeUpdate();
@@ -245,6 +246,14 @@ public class SqliteTagRepository implements TagRepository {
     private void deleteRoles(long tagId) throws SQLException {
         try (PreparedStatement statement = this.connection.prepareStatement(DELETE_ROLES_SQL)) {
             statement.setLong(1, tagId);
+            statement.executeUpdate();
+        }
+    }
+
+    private void removeFromProfiles(long guildId, long tagId) throws SQLException {
+        try (PreparedStatement statement = this.connection.prepareStatement(REMOVE_FROM_PROFILES_SQL)) {
+            statement.setLong(1, guildId);
+            statement.setLong(2, tagId);
             statement.executeUpdate();
         }
     }

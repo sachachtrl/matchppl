@@ -25,7 +25,7 @@ What the matching is *for* is up to each server — finding teammates, planning 
 
 ### Available
 
-- **`/match`** — enable or disable your match search through a private card with a toggle button.
+- **`/match`** — a single private card to manage your profile: enable or disable your search, write a short introduction with a live preview, pick your tags (only the ones you are allowed to use), exclude tags you never want to be matched with, and switch to anonymous mode. An advanced card adds required tags, a minimum compatibility, a photo requirement and conditions on the other person.
 - **`/setadmin <role>`** / **`/removeadmin <role>`** — choose which roles may use the bot's admin commands (requires the *Manage Server* permission).
 - **`/newtag <name> <emoji>`** — create an independent tag (a game, a city…) and configure its access conditions in place: minimum account age, time on the server, recent activity, required and forbidden roles. Every change is saved instantly.
 - **`/tags`** — browse the server's tags page by page, open any of them in the same configuration card, and delete them after confirmation.
@@ -35,7 +35,6 @@ What the matching is *for* is up to each server — finding teammates, planning 
 
 ### Planned
 
-- **Profiles in `/match`** — a single card to manage everything: a short introduction with live preview, chosen tags, excluded tags (never be matched with someone who has them), anonymous mode, and advanced settings such as required tags and minimum compatibility.
 - **Matching** — the score is the number of shared tags divided by the larger tag count, so it is identical on both sides. The best available score is always proposed first.
 - **Double-blind proposals** — sent privately to both members at once, with *Skip* and *Accept* buttons and a response deadline. A refusal is indistinguishable from no answer.
 - **Temporary channels** — a private text and voice channel for each mutual match, deleted when its lifetime ends.
@@ -76,10 +75,12 @@ Services depend on repository **interfaces**, and every dependency is injected t
 ### Run
 
 1. Clone the repository.
-2. Copy `.env.example` to `.env` and fill in your bot token:
+2. Copy `.env.example` to `.env` and fill in your bot token and an encryption key for member introductions:
    ```
    TOKEN=your_bot_token
+   PROFILE_KEY=32_random_bytes_in_base64
    ```
+   Generate the key with `openssl rand -base64 32`, and keep a copy somewhere safe: without it, stored introductions can no longer be read.
 3. Start the bot:
    ```bash
    mvn
@@ -97,6 +98,8 @@ mvn test
 
 - The bot only requests the `GUILD_MESSAGES` intent, to count messages. It does **not** use the privileged *Message Content* intent and never reads what members write.
 - Profiles are **per server** and cannot be copied from one server to another.
+- Member introductions are **encrypted at rest** with AES-256-GCM. The key lives outside the database, so a leaked database file alone reveals none of them.
+- Excluded tags are private: the other person is never told why they were not proposed.
 - The bot stores no images.
 
 ## License

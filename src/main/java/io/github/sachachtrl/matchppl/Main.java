@@ -13,13 +13,16 @@ import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteTagRepository;
 import io.github.sachachtrl.matchppl.repository.TagRepository;
+import io.github.sachachtrl.matchppl.repository.TextCipher;
 import io.github.sachachtrl.matchppl.service.ActivityService;
+import io.github.sachachtrl.matchppl.service.ConditionChecker;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 import io.github.sachachtrl.matchppl.service.TagService;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import java.sql.SQLException;
+import java.time.Clock;
 import java.time.Duration;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -42,6 +45,14 @@ public class Main {
             log.error("No token");
             System.exit(1);
         }
+        TextCipher cipher;
+        try {
+            cipher = TextCipher.fromBase64(env.get("PROFILE_KEY", ""));
+        } catch (IllegalArgumentException e) {
+            log.error("PROFILE_KEY is missing or invalid: it must be 32 random bytes encoded in Base64");
+            System.exit(1);
+            return;
+        }
         Database database;
         try {
             database = new Database("jdbc:sqlite:matchppl.db");
@@ -53,15 +64,16 @@ public class Main {
         ActivityRepository activityRepo = new SqliteActivityRepository(database);
         ActivityService activityService = new ActivityService(activityRepo);
         ActivityListener activityListener = new ActivityListener(activityService);
-        ProfileRepository profileRepo = new SqliteProfileRepository(database);
-        ProfileService profileService = new ProfileService(profileRepo);
-        MatchListener matchListener = new MatchListener(profileService);
+        ConditionChecker conditionChecker = new ConditionChecker(activityService, Clock.systemUTC());
         GuildConfigRepository guildConfigRepo = new SqliteGuildConfigRepository(database);
         GuildConfigService guildConfigService = new GuildConfigService(guildConfigRepo);
         AdminListener adminListener = new AdminListener(guildConfigService);
         TagRepository tagRepo = new SqliteTagRepository(database);
-        TagService tagService = new TagService(tagRepo);
+        TagService tagService = new TagService(tagRepo, conditionChecker);
         TagListener tagListener = new TagListener(tagService, guildConfigService);
+        ProfileRepository profileRepo = new SqliteProfileRepository(database, cipher);
+        ProfileService profileService = new ProfileService(profileRepo, tagService);
+        MatchListener matchListener = new MatchListener(profileService, tagService);
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
                 .setHttpClientBuilder(new OkHttpClient.Builder().pingInterval(HTTP_PING_INTERVAL))
                 .addEventListeners(activityListener, matchListener, adminListener, tagListener);

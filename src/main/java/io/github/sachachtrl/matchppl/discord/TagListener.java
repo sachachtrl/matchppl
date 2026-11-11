@@ -1,11 +1,10 @@
 package io.github.sachachtrl.matchppl.discord;
 
-import io.github.sachachtrl.matchppl.model.ActivityPeriod;
+import io.github.sachachtrl.matchppl.model.MemberConditions;
 import io.github.sachachtrl.matchppl.model.Tag;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
 import io.github.sachachtrl.matchppl.service.TagService;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -13,10 +12,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.components.label.Label;
-import net.dv8tion.jda.api.components.selections.SelectOption;
-import net.dv8tion.jda.api.components.selections.StringSelectMenu;
-import net.dv8tion.jda.api.components.textinput.TextInput;
-import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
@@ -33,7 +28,6 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
-import net.dv8tion.jda.api.interactions.modals.ModalMapping;
 import net.dv8tion.jda.api.modals.Modal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,8 +43,6 @@ public class TagListener extends ListenerAdapter {
     private static final String VALUE_INPUT = "value";
     private static final String MESSAGES_INPUT = "messages";
     private static final String PERIOD_INPUT = "period";
-    private static final int MAX_DAYS = 36500;
-    private static final int MAX_MESSAGES = 100000;
     private static final int MAX_UNICODE_EMOJI_LENGTH = 16;
 
     private record ComponentTarget(String action, long tagId) {}
@@ -157,10 +149,10 @@ public class TagListener extends ListenerAdapter {
             }
             case TagViews.AGE -> event.replyModal(this.daysModal(tag.get(), TagViews.AGE,
                     Messages.get(locale, "tag.age.title"), Messages.get(locale, "tag.modal.age.label"),
-                    tag.get().minAccountAgeDays(), locale)).queue();
+                    tag.get().conditions().minAccountAgeDays(), locale)).queue();
             case TagViews.SENIORITY -> event.replyModal(this.daysModal(tag.get(), TagViews.SENIORITY,
                     Messages.get(locale, "tag.seniority.title"), Messages.get(locale, "tag.modal.seniority.label"),
-                    tag.get().minMemberDays(), locale)).queue();
+                    tag.get().conditions().minMemberDays(), locale)).queue();
             case TagViews.ACTIVITY -> event.replyModal(this.activityModal(tag.get(), locale)).queue();
             case TagViews.DONE -> event.editComponents(TagViews.savedCard(tag.get(), locale))
                     .useComponentsV2()
@@ -188,15 +180,16 @@ public class TagListener extends ListenerAdapter {
         try {
             updated = switch (target.action()) {
                 case TagViews.AGE -> this.tagService.setMinAccountAge(guildId, target.tagId(),
-                        parseNumber(event.getValue(VALUE_INPUT), MAX_DAYS));
+                        ModalInputs.parseNumber(event.getValue(VALUE_INPUT), ModalInputs.MAX_DAYS));
                 case TagViews.SENIORITY -> this.tagService.setMinMemberDays(guildId, target.tagId(),
-                        parseNumber(event.getValue(VALUE_INPUT), MAX_DAYS));
+                        ModalInputs.parseNumber(event.getValue(VALUE_INPUT), ModalInputs.MAX_DAYS));
                 case TagViews.ACTIVITY -> this.tagService.setActivity(guildId, target.tagId(),
-                        parseNumber(event.getValue(MESSAGES_INPUT), MAX_MESSAGES), parsePeriod(event.getValue(PERIOD_INPUT)));
+                        ModalInputs.parseNumber(event.getValue(MESSAGES_INPUT), ModalInputs.MAX_MESSAGES),
+                        ModalInputs.parsePeriod(event.getValue(PERIOD_INPUT)));
                 default -> Optional.empty();
             };
         } catch (IllegalArgumentException e) {
-            int max = target.action().equals(TagViews.ACTIVITY) ? MAX_MESSAGES : MAX_DAYS;
+            int max = target.action().equals(TagViews.ACTIVITY) ? ModalInputs.MAX_MESSAGES : ModalInputs.MAX_DAYS;
             this.replyError(event, Messages.get(locale, "error.invalid_title"),
                     Messages.format(locale, "tag.error.number_invalid", max));
             return;
@@ -261,37 +254,20 @@ public class TagListener extends ListenerAdapter {
 
     private Modal daysModal(Tag tag, String action, String title, String label, Integer current, Locale locale) {
         return Modal.create(MODAL_PREFIX + action + ":" + tag.id(), title)
-                .addComponents(Label.of(label, Messages.get(locale, "tag.modal.zero_hint"), numberInput(VALUE_INPUT, current)))
+                .addComponents(Label.of(label, Messages.get(locale, "tag.modal.zero_hint"), ModalInputs.numberInput(VALUE_INPUT, current)))
                 .build();
     }
 
     private Modal activityModal(Tag tag, Locale locale) {
-        ActivityPeriod current = tag.activityPeriod() == null ? TagService.DEFAULT_ACTIVITY_PERIOD : tag.activityPeriod();
-        List<SelectOption> options = Arrays.stream(ActivityPeriod.values())
-                .map(period -> SelectOption.of(
-                                Messages.get(locale, "tag.period.option." + period.name().toLowerCase(Locale.ROOT)),
-                                period.name())
-                        .withDefault(period == current))
-                .toList();
+        MemberConditions conditions = tag.conditions();
         return Modal.create(MODAL_PREFIX + TagViews.ACTIVITY + ":" + tag.id(), Messages.get(locale, "tag.activity.title"))
                 .addComponents(
                         Label.of(Messages.get(locale, "tag.modal.activity.messages"),
                                 Messages.get(locale, "tag.modal.zero_hint"),
-                                numberInput(MESSAGES_INPUT, tag.minMessages())),
+                                ModalInputs.numberInput(MESSAGES_INPUT, conditions.minMessages())),
                         Label.of(Messages.get(locale, "tag.modal.activity.period"),
-                                StringSelectMenu.create(PERIOD_INPUT).addOptions(options).setRequiredRange(1, 1).build()))
+                                ModalInputs.periodSelect(PERIOD_INPUT, conditions.activityPeriod(), locale)))
                 .build();
-    }
-
-    private static TextInput numberInput(String id, Integer current) {
-        TextInput.Builder input = TextInput.create(id, TextInputStyle.SHORT)
-                .setRequired(false)
-                .setMaxLength(6)
-                .setPlaceholder("0");
-        if (current != null) {
-            input.setValue(String.valueOf(current));
-        }
-        return input.build();
     }
 
     private boolean isAdmin(Member member) {
@@ -329,28 +305,6 @@ public class TagListener extends ListenerAdapter {
         } catch (NumberFormatException e) {
             return null;
         }
-    }
-
-    private static Integer parseNumber(ModalMapping mapping, int max) {
-        String raw = mapping == null ? "" : mapping.getAsString().strip();
-        if (raw.isEmpty()) {
-            return null;
-        }
-        if (!raw.chars().allMatch(Character::isDigit)) {
-            throw new IllegalArgumentException("Not a whole number: " + raw);
-        }
-        int value = Integer.parseInt(raw);
-        if (value > max) {
-            throw new IllegalArgumentException("Number too large: " + raw);
-        }
-        return value;
-    }
-
-    private static ActivityPeriod parsePeriod(ModalMapping mapping) {
-        if (mapping == null || mapping.getAsStringList().isEmpty()) {
-            return null;
-        }
-        return ActivityPeriod.valueOf(mapping.getAsStringList().getFirst());
     }
 
     private static boolean isPlausibleUnicodeEmoji(String input) {
