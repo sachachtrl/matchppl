@@ -1,10 +1,12 @@
 package io.github.sachachtrl.matchppl.repository;
 
 import java.sql.SQLException;
+import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,5 +59,15 @@ class SqliteGuildConfigRepositoryTest {
 
         assertTrue(this.repository.addAdminRole(OTHER_GUILD, ROLE));
         assertFalse(this.repository.removeAdminRole(OTHER_GUILD, ROLE + 1));
+    }
+
+    @Test
+    void adminRolesOfAGuildAreListed() {
+        this.repository.addAdminRole(GUILD, ROLE);
+        this.repository.addAdminRole(GUILD, ROLE + 1);
+        this.repository.addAdminRole(OTHER_GUILD, ROLE + 2);
+        this.repository.removeAdminRole(GUILD, ROLE + 1);
+
+        assertEquals(Set.of(ROLE), this.repository.findAdminRoles(GUILD));
     }
 }

@@ -86,6 +86,7 @@ public class Main {
                             MatchListener.command(),
                             AdminListener.setAdminCommand(),
                             AdminListener.removeAdminCommand(),
+                            AdminListener.listAdminCommand(),
                             TagListener.newTagCommand(),
                             TagListener.tagsCommand())
                     .queue();

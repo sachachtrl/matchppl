@@ -34,6 +34,16 @@ class GuildConfigServiceTest {
     }
 
     @Test
+    void roleAddedThenRemovedElsewhereIsNoLongerListed() {
+        assertTrue(this.service.listAdminRoles(GUILD).contains(ADMIN_ROLE));
+
+        assertTrue(this.service.removeAdminRole(GUILD, ADMIN_ROLE));
+        assertFalse(this.service.removeAdminRole(GUILD, ADMIN_ROLE));
+
+        assertTrue(this.service.listAdminRoles(GUILD).isEmpty());
+    }
+
+    @Test
     void memberWithAnAdminRoleIsAdmin() {
         assertTrue(this.service.isAdmin(GUILD, List.of(OTHER_ROLE, ADMIN_ROLE), false));
     }

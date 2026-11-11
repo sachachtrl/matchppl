@@ -20,6 +20,10 @@ public class GuildConfigService {
         return this.guildConfigRepo.removeAdminRole(guildId, roleId);
     }
 
+    public Set<Long> listAdminRoles(long guildId) {
+        return Set.copyOf(this.guildConfigRepo.findAdminRoles(guildId));
+    }
+
     public boolean isAdmin(long guildId, Collection<Long> memberRoleIds, boolean canManageServer) {
         if (canManageServer) {
             return true;
