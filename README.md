@@ -27,13 +27,14 @@ What the matching is *for* is up to each server — finding teammates, planning 
 
 - **`/match`** — enable or disable your match search through a private card with a toggle button.
 - **`/setadmin <role>`** / **`/removeadmin <role>`** — choose which roles may use the bot's admin commands (requires the *Manage Server* permission).
+- **`/newtag <name> <emoji>`** — create an independent tag (a game, a city…) and configure its access conditions in place: minimum account age, time on the server, recent activity, required and forbidden roles. Every change is saved instantly.
 - **Activity tracking** — daily message counts per member, used later for tag access conditions. The bot never reads message content.
 - **Translatable interface** — every user-facing text lives in resource bundles, with English as the default language.
 - **Modern message layout** — replies use Discord's Components V2: cards with sections, separators and inline buttons.
 
 ### Planned
 
-- **Tags** (`/newtag`) — independent tags (a game, a city…) with access conditions: account age, server seniority, recent activity, required or forbidden roles.
+- **Tag management** — list the server's tags, edit them with the same card used at creation, and delete them after confirmation.
 - **Profiles** (`/userconfig`) — chosen tags, a short introduction, required tags, minimum compatibility, anonymity.
 - **Matching** — the score is the number of shared tags divided by the larger tag count, so it is identical on both sides. The best available score is always proposed first.
 - **Double-blind proposals** — sent privately to both members at once, with *Skip* and *Accept* buttons and a response deadline. A refusal is indistinguishable from no answer.

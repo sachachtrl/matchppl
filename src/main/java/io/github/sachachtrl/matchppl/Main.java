@@ -3,6 +3,7 @@ package io.github.sachachtrl.matchppl;
 import io.github.sachachtrl.matchppl.discord.ActivityListener;
 import io.github.sachachtrl.matchppl.discord.AdminListener;
 import io.github.sachachtrl.matchppl.discord.MatchListener;
+import io.github.sachachtrl.matchppl.discord.TagListener;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.GuildConfigRepository;
@@ -10,9 +11,12 @@ import io.github.sachachtrl.matchppl.repository.ProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteActivityRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteTagRepository;
+import io.github.sachachtrl.matchppl.repository.TagRepository;
 import io.github.sachachtrl.matchppl.service.ActivityService;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
 import io.github.sachachtrl.matchppl.service.ProfileService;
+import io.github.sachachtrl.matchppl.service.TagService;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import java.sql.SQLException;
@@ -50,8 +54,11 @@ public class Main {
         GuildConfigRepository guildConfigRepo = new SqliteGuildConfigRepository(database);
         GuildConfigService guildConfigService = new GuildConfigService(guildConfigRepo);
         AdminListener adminListener = new AdminListener(guildConfigService);
+        TagRepository tagRepo = new SqliteTagRepository(database);
+        TagService tagService = new TagService(tagRepo);
+        TagListener tagListener = new TagListener(tagService, guildConfigService);
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
-                .addEventListeners(activityListener, matchListener, adminListener);
+                .addEventListeners(activityListener, matchListener, adminListener, tagListener);
         try {
             JDA bot = builder.build();
             bot.awaitReady();
@@ -59,7 +66,8 @@ public class Main {
                     .addCommands(
                             MatchListener.command(),
                             AdminListener.setAdminCommand(),
-                            AdminListener.removeAdminCommand())
+                            AdminListener.removeAdminCommand(),
+                            TagListener.command())
                     .queue();
             log.info("Bot is logged in as {}", bot.getSelfUser().getAsTag());
         } catch (InvalidTokenException e) {
