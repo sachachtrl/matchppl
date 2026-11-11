@@ -72,7 +72,7 @@ public class Main {
         TagService tagService = new TagService(tagRepo, conditionChecker);
         TagListener tagListener = new TagListener(tagService, guildConfigService);
         ProfileRepository profileRepo = new SqliteProfileRepository(database, cipher);
-        ProfileService profileService = new ProfileService(profileRepo, tagService);
+        ProfileService profileService = new ProfileService(profileRepo, tagService, Clock.systemUTC());
         MatchListener matchListener = new MatchListener(profileService, tagService);
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
                 .setHttpClientBuilder(new OkHttpClient.Builder().pingInterval(HTTP_PING_INTERVAL))

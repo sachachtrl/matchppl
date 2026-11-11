@@ -2,12 +2,14 @@ package io.github.sachachtrl.matchppl.repository;
 
 import io.github.sachachtrl.matchppl.model.ActivityPeriod;
 import io.github.sachachtrl.matchppl.model.MemberConditions;
+import io.github.sachachtrl.matchppl.model.PartnerPreferences;
 import io.github.sachachtrl.matchppl.model.Profile;
 import io.github.sachachtrl.matchppl.model.Tag;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,13 +46,15 @@ class SqliteProfileRepositoryTest {
         assertFalse(profile.searching());
         assertNull(profile.presentation());
         assertTrue(profile.tagIds().isEmpty());
-        assertTrue(profile.partnerConditions().isEmpty());
+        assertEquals(PartnerPreferences.DEFAULT, profile.preferences());
     }
 
     @Test
     void savedProfileIsReadBackIdentically() {
-        Profile profile = new Profile(GUILD, USER, true, "Chill player", true, Set.of(1L, 2L), Set.of(3L), Set.of(1L),
-                50, true, new MemberConditions(30, 7, 20, ActivityPeriod.TWO_WEEKS));
+        PartnerPreferences preferences = new PartnerPreferences(Set.of(1L), 50, 2, true, true,
+                new MemberConditions(30, 7, 20, ActivityPeriod.TWO_WEEKS));
+        Profile profile = new Profile(GUILD, USER, true, Instant.parse("2026-11-11T12:00:00Z"), "Chill player", true,
+                Set.of(1L, 2L), Set.of(3L), preferences);
 
         this.repository.save(profile);
 
@@ -86,7 +90,7 @@ class SqliteProfileRepositoryTest {
 
     @Test
     void profilesAreSeparatedByGuild() {
-        this.repository.save(Profile.empty(GUILD, USER).withSearching(true).withPresentation("Hello"));
+        this.repository.save(Profile.empty(GUILD, USER).withSearching(true, Instant.parse("2026-11-11T12:00:00Z")).withPresentation("Hello"));
 
         Profile other = this.repository.find(OTHER_GUILD, USER);
         assertFalse(other.searching());
@@ -105,6 +109,6 @@ class SqliteProfileRepositoryTest {
 
         Profile found = this.repository.find(GUILD, USER);
         assertEquals(Set.of(lille.id()), found.tagIds());
-        assertTrue(found.requiredTagIds().isEmpty());
+        assertTrue(found.preferences().requiredTagIds().isEmpty());
     }
 }

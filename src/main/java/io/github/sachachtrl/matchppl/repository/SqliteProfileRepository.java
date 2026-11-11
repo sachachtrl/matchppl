@@ -2,6 +2,7 @@ package io.github.sachachtrl.matchppl.repository;
 
 import io.github.sachachtrl.matchppl.model.ActivityPeriod;
 import io.github.sachachtrl.matchppl.model.MemberConditions;
+import io.github.sachachtrl.matchppl.model.PartnerPreferences;
 import io.github.sachachtrl.matchppl.model.Profile;
 
 import java.security.GeneralSecurityException;
@@ -10,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import org.slf4j.Logger;
@@ -23,8 +25,9 @@ public class SqliteProfileRepository implements ProfileRepository {
     private static final String REQUIRED_KIND = "REQUIRED";
 
     private static final String FIND_SQL = """
-            SELECT searching, presentation, anonymous, min_compatibility, require_photo,
-                   min_account_age_days, min_member_days, min_messages, activity_period
+            SELECT searching, presentation, anonymous, min_compatibility, exclude_anonymous,
+                   min_account_age_days, min_member_days, min_messages, activity_period,
+                   exclude_default_avatars, min_common_tags, waiting_since
             FROM profile
             WHERE guild_id = ? AND user_id = ?
             """;
@@ -33,18 +36,22 @@ public class SqliteProfileRepository implements ProfileRepository {
             """;
     private static final String SAVE_SQL = """
             INSERT INTO profile (guild_id, user_id, searching, presentation, anonymous, min_compatibility,
-                                 require_photo, min_account_age_days, min_member_days, min_messages, activity_period)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 exclude_anonymous, min_account_age_days, min_member_days, min_messages,
+                                 activity_period, exclude_default_avatars, min_common_tags, waiting_since)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (guild_id, user_id) DO UPDATE SET
                 searching = excluded.searching,
                 presentation = excluded.presentation,
                 anonymous = excluded.anonymous,
                 min_compatibility = excluded.min_compatibility,
-                require_photo = excluded.require_photo,
+                exclude_anonymous = excluded.exclude_anonymous,
                 min_account_age_days = excluded.min_account_age_days,
                 min_member_days = excluded.min_member_days,
                 min_messages = excluded.min_messages,
-                activity_period = excluded.activity_period
+                activity_period = excluded.activity_period,
+                exclude_default_avatars = excluded.exclude_default_avatars,
+                min_common_tags = excluded.min_common_tags,
+                waiting_since = excluded.waiting_since
             """;
     private static final String DELETE_TAGS_SQL = """
             DELETE FROM profile_tag WHERE guild_id = ? AND user_id = ?
@@ -76,23 +83,29 @@ public class SqliteProfileRepository implements ProfileRepository {
                     Set<Long> required = new HashSet<>();
                     this.loadTags(guildId, userId, chosen, excluded, required);
                     String period = result.getString(9);
-                    MemberConditions partnerConditions = new MemberConditions(
+                    String waitingSince = result.getString(12);
+                    MemberConditions conditions = new MemberConditions(
                             getNullableInt(result, 6),
                             getNullableInt(result, 7),
                             getNullableInt(result, 8),
                             period == null ? null : ActivityPeriod.valueOf(period));
+                    PartnerPreferences preferences = new PartnerPreferences(
+                            required,
+                            getNullableInt(result, 4),
+                            result.getInt(11),
+                            result.getBoolean(5),
+                            result.getBoolean(10),
+                            conditions);
                     return new Profile(
                             guildId,
                             userId,
                             result.getBoolean(1),
+                            waitingSince == null ? null : Instant.parse(waitingSince),
                             this.decryptPresentation(result.getString(2), guildId, userId),
                             result.getBoolean(3),
                             chosen,
                             excluded,
-                            required,
-                            getNullableInt(result, 4),
-                            result.getBoolean(5),
-                            partnerConditions);
+                            preferences);
                 }
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to read profile", e);
@@ -123,7 +136,8 @@ public class SqliteProfileRepository implements ProfileRepository {
 
     private void saveRow(Profile profile) throws SQLException {
         try (PreparedStatement statement = this.connection.prepareStatement(SAVE_SQL)) {
-            MemberConditions conditions = profile.partnerConditions();
+            PartnerPreferences preferences = profile.preferences();
+            MemberConditions conditions = preferences.conditions();
             statement.setLong(1, profile.guildId());
             statement.setLong(2, profile.userId());
             statement.setBoolean(3, profile.searching());
@@ -131,12 +145,15 @@ public class SqliteProfileRepository implements ProfileRepository {
                     ? null
                     : this.cipher.encrypt(profile.presentation(), context(profile.guildId(), profile.userId())));
             statement.setBoolean(5, profile.anonymous());
-            setNullableInt(statement, 6, profile.minCompatibility());
-            statement.setBoolean(7, profile.requirePhoto());
+            setNullableInt(statement, 6, preferences.minCompatibility());
+            statement.setBoolean(7, preferences.excludeAnonymous());
             setNullableInt(statement, 8, conditions.minAccountAgeDays());
             setNullableInt(statement, 9, conditions.minMemberDays());
             setNullableInt(statement, 10, conditions.minMessages());
             statement.setString(11, conditions.activityPeriod() == null ? null : conditions.activityPeriod().name());
+            statement.setBoolean(12, preferences.excludeDefaultAvatars());
+            statement.setInt(13, preferences.minCommonTags());
+            statement.setString(14, profile.waitingSince() == null ? null : profile.waitingSince().toString());
             statement.executeUpdate();
         }
     }
@@ -150,7 +167,7 @@ public class SqliteProfileRepository implements ProfileRepository {
         try (PreparedStatement insert = this.connection.prepareStatement(INSERT_TAG_SQL)) {
             addTags(insert, profile, profile.tagIds(), CHOSEN_KIND);
             addTags(insert, profile, profile.excludedTagIds(), EXCLUDED_KIND);
-            addTags(insert, profile, profile.requiredTagIds(), REQUIRED_KIND);
+            addTags(insert, profile, profile.preferences().requiredTagIds(), REQUIRED_KIND);
             insert.executeBatch();
         }
     }

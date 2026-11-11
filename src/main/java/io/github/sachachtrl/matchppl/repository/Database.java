@@ -81,24 +81,42 @@ public class Database implements AutoCloseable {
         this.addColumnIfMissing("profile", "presentation", "TEXT");
         this.addColumnIfMissing("profile", "anonymous", "INTEGER NOT NULL DEFAULT 0");
         this.addColumnIfMissing("profile", "min_compatibility", "INTEGER");
-        this.addColumnIfMissing("profile", "require_photo", "INTEGER NOT NULL DEFAULT 0");
+        this.renameColumnIfPresent("profile", "require_photo", "exclude_anonymous");
+        this.addColumnIfMissing("profile", "exclude_anonymous", "INTEGER NOT NULL DEFAULT 0");
         this.addColumnIfMissing("profile", "min_account_age_days", "INTEGER");
         this.addColumnIfMissing("profile", "min_member_days", "INTEGER");
         this.addColumnIfMissing("profile", "min_messages", "INTEGER");
         this.addColumnIfMissing("profile", "activity_period", "TEXT");
+        this.addColumnIfMissing("profile", "exclude_default_avatars", "INTEGER NOT NULL DEFAULT 0");
+        this.addColumnIfMissing("profile", "min_common_tags", "INTEGER NOT NULL DEFAULT 1");
+        this.addColumnIfMissing("profile", "waiting_since", "TEXT");
     }
 
     private void addColumnIfMissing(String table, String column, String definition) throws SQLException {
-        try (Statement statement = this.connection.createStatement()) {
-            Set<String> columns = new HashSet<>();
-            try (ResultSet result = statement.executeQuery("PRAGMA table_info(" + table + ")")) {
-                while (result.next()) {
-                    columns.add(result.getString("name"));
-                }
-            }
-            if (!columns.contains(column)) {
+        if (!this.columnsOf(table).contains(column)) {
+            try (Statement statement = this.connection.createStatement()) {
                 statement.executeUpdate("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition);
             }
+        }
+    }
+
+    private void renameColumnIfPresent(String table, String oldName, String newName) throws SQLException {
+        Set<String> columns = this.columnsOf(table);
+        if (columns.contains(oldName) && !columns.contains(newName)) {
+            try (Statement statement = this.connection.createStatement()) {
+                statement.executeUpdate("ALTER TABLE " + table + " RENAME COLUMN " + oldName + " TO " + newName);
+            }
+        }
+    }
+
+    private Set<String> columnsOf(String table) throws SQLException {
+        try (Statement statement = this.connection.createStatement();
+                ResultSet result = statement.executeQuery("PRAGMA table_info(" + table + ")")) {
+            Set<String> columns = new HashSet<>();
+            while (result.next()) {
+                columns.add(result.getString("name"));
+            }
+            return columns;
         }
     }
 

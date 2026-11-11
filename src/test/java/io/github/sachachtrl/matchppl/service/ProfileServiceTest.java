@@ -45,7 +45,8 @@ class ProfileServiceTest {
                 Clock.fixed(NOW, ZoneOffset.UTC));
         this.tagService = new TagService(new SqliteTagRepository(this.database), checker);
         this.service = new ProfileService(
-                new SqliteProfileRepository(this.database, new TextCipher(new byte[32])), this.tagService);
+                new SqliteProfileRepository(this.database, new TextCipher(new byte[32])), this.tagService,
+                Clock.fixed(NOW, ZoneOffset.UTC));
         this.finals = this.createTag("The Finals");
         this.medium = this.createTag("Medium");
         this.light = this.createTag("Light");
@@ -109,7 +110,7 @@ class ProfileServiceTest {
         Profile updated = this.service.setExcludedTags(GUILD, USER, Set.of(this.light.id()));
 
         assertEquals(Set.of(this.finals.id()), updated.tagIds());
-        assertTrue(updated.requiredTagIds().isEmpty());
+        assertTrue(updated.preferences().requiredTagIds().isEmpty());
         assertEquals(Set.of(this.light.id()), updated.excludedTagIds());
     }
 
@@ -152,19 +153,68 @@ class ProfileServiceTest {
     void compatibilityMustBeBetweenZeroAndOneHundred() {
         assertFalse(this.service.setMinCompatibility(GUILD, USER, 101));
         assertTrue(this.service.setMinCompatibility(GUILD, USER, 50));
-        assertEquals(50, this.service.getProfile(GUILD, USER).minCompatibility());
+        assertEquals(50, this.service.getProfile(GUILD, USER).preferences().minCompatibility());
 
         assertTrue(this.service.setMinCompatibility(GUILD, USER, 0));
-        assertNull(this.service.getProfile(GUILD, USER).minCompatibility());
+        assertNull(this.service.getProfile(GUILD, USER).preferences().minCompatibility());
     }
 
     @Test
     void partnerConditionsFollowTheTagRules() {
         Profile updated = this.service.setPartnerConditions(GUILD, USER, 30, 0, 20, null);
 
-        assertEquals(30, updated.partnerConditions().minAccountAgeDays());
-        assertNull(updated.partnerConditions().minMemberDays());
-        assertEquals(20, updated.partnerConditions().minMessages());
-        assertEquals(ActivityPeriod.THIRTY_DAYS, updated.partnerConditions().activityPeriod());
+        assertEquals(30, updated.preferences().conditions().minAccountAgeDays());
+        assertNull(updated.preferences().conditions().minMemberDays());
+        assertEquals(20, updated.preferences().conditions().minMessages());
+        assertEquals(ActivityPeriod.THIRTY_DAYS, updated.preferences().conditions().activityPeriod());
+    }
+
+    @Test
+    void enablingTheSearchRecordsWhenTheWaitStarted() {
+        this.service.setTags(MEMBER, Set.of(this.finals.id()));
+
+        this.service.setSearching(GUILD, USER, true);
+
+        assertEquals(NOW, this.service.getProfile(GUILD, USER).waitingSince());
+    }
+
+    @Test
+    void disablingTheSearchClearsTheWaitStart() {
+        this.service.setTags(MEMBER, Set.of(this.finals.id()));
+        this.service.setSearching(GUILD, USER, true);
+
+        this.service.setSearching(GUILD, USER, false);
+
+        assertNull(this.service.getProfile(GUILD, USER).waitingSince());
+    }
+
+    @Test
+    void removingEveryTagAlsoClearsTheWaitStart() {
+        this.service.setTags(MEMBER, Set.of(this.finals.id()));
+        this.service.setSearching(GUILD, USER, true);
+
+        assertNull(this.service.setTags(MEMBER, Set.of()).waitingSince());
+    }
+
+    @Test
+    void minimumCommonTagsDefaultsToOneAndStaysWithinRange() {
+        assertEquals(1, this.service.getProfile(GUILD, USER).preferences().minCommonTags());
+
+        assertFalse(this.service.setMinCommonTags(GUILD, USER, ProfileService.MAX_MIN_COMMON_TAGS + 1));
+        assertFalse(this.service.setMinCommonTags(GUILD, USER, -1));
+        assertTrue(this.service.setMinCommonTags(GUILD, USER, 0));
+
+        assertEquals(0, this.service.getProfile(GUILD, USER).preferences().minCommonTags());
+    }
+
+    @Test
+    void anonymousAndDefaultAvatarExclusionsAreSavedSeparately() {
+        this.service.setExcludeAnonymous(GUILD, USER, true);
+
+        Profile updated = this.service.setExcludeDefaultAvatars(GUILD, USER, true);
+
+        assertTrue(updated.preferences().excludeAnonymous());
+        assertTrue(updated.preferences().excludeDefaultAvatars());
+        assertFalse(this.service.setExcludeAnonymous(GUILD, USER, false).preferences().excludeAnonymous());
     }
 }

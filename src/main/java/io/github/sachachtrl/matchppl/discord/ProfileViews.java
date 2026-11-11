@@ -1,12 +1,15 @@
 package io.github.sachachtrl.matchppl.discord;
 
+import io.github.sachachtrl.matchppl.model.PartnerPreferences;
 import io.github.sachachtrl.matchppl.model.Profile;
 import io.github.sachachtrl.matchppl.model.Tag;
+import io.github.sachachtrl.matchppl.service.ProfileService;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.IntStream;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
@@ -31,8 +34,11 @@ final class ProfileViews {
     static final String MAIN = PREFIX + "main";
     static final String REQUIRED = PREFIX + "required";
     static final String COMPATIBILITY = PREFIX + "compatibility";
-    static final String PHOTO_ON = PREFIX + "photo:on";
-    static final String PHOTO_OFF = PREFIX + "photo:off";
+    static final String EXCLUDE_ANONYMOUS_ON = PREFIX + "excludeanonymous:on";
+    static final String EXCLUDE_ANONYMOUS_OFF = PREFIX + "excludeanonymous:off";
+    static final String EXCLUDE_AVATARS_ON = PREFIX + "excludeavatars:on";
+    static final String EXCLUDE_AVATARS_OFF = PREFIX + "excludeavatars:off";
+    static final String MIN_COMMON_TAGS = PREFIX + "mincommontags";
     static final String CONDITIONS = PREFIX + "conditions";
 
     static final int MAX_SELECT_OPTIONS = 25;
@@ -66,12 +72,7 @@ final class ProfileViews {
                     Messages.get(locale, "profile.excluded.placeholder"))));
         }
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
-        children.add(Section.of(
-                toggleButton(profile.anonymous(), ANONYMOUS_ON, ANONYMOUS_OFF, locale),
-                TextDisplay.of("**" + Messages.get(locale, "profile.anonymous.title") + "**\n-# "
-                        + Messages.get(locale, profile.anonymous()
-                                ? "profile.anonymous.enabled"
-                                : "profile.anonymous.disabled"))));
+        children.add(toggleSection(profile.anonymous(), ANONYMOUS_ON, ANONYMOUS_OFF, "profile.anonymous", locale));
         children.add(Separator.createDivider(Separator.Spacing.LARGE));
         children.add(ActionRow.of(Button.secondary(ADVANCED, Messages.get(locale, "profile.button.advanced"))));
         return Container.of(children)
@@ -79,6 +80,7 @@ final class ProfileViews {
     }
 
     static Container advancedCard(Profile profile, List<Tag> allTags, Locale locale) {
+        PartnerPreferences preferences = profile.preferences();
         List<ContainerChildComponent> children = new ArrayList<>();
         children.add(TextDisplay.of("## " + Messages.get(locale, "advanced.title") + "\n-# "
                 + Messages.get(locale, "advanced.subtitle")));
@@ -86,27 +88,30 @@ final class ProfileViews {
             children.add(Separator.createDivider(Separator.Spacing.SMALL));
             children.add(TextDisplay.of("**" + Messages.get(locale, "advanced.required.title") + "**\n-# "
                     + Messages.get(locale, "advanced.required.hint")));
-            children.add(ActionRow.of(tagSelect(REQUIRED, allTags, profile.requiredTagIds(),
+            children.add(ActionRow.of(tagSelect(REQUIRED, allTags, preferences.requiredTagIds(),
                     Messages.get(locale, "advanced.required.placeholder"))));
         }
+        children.add(Separator.createDivider(Separator.Spacing.SMALL));
+        children.add(TextDisplay.of("**" + Messages.get(locale, "advanced.common.title") + "**\n-# "
+                + Messages.get(locale, "advanced.common.hint")));
+        children.add(ActionRow.of(minCommonTagsSelect(preferences.minCommonTags(), locale)));
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
         children.add(Section.of(
                 Button.secondary(COMPATIBILITY, Messages.get(locale, "profile.button.edit")),
                 TextDisplay.of("**" + Messages.get(locale, "advanced.compat.title") + "**\n-# "
-                        + compatibilityText(profile, locale))));
+                        + compatibilityText(preferences, locale))));
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
-        children.add(Section.of(
-                toggleButton(profile.requirePhoto(), PHOTO_ON, PHOTO_OFF, locale),
-                TextDisplay.of("**" + Messages.get(locale, "advanced.photo.title") + "**\n-# "
-                        + Messages.get(locale, profile.requirePhoto()
-                                ? "advanced.photo.enabled"
-                                : "advanced.photo.disabled"))));
+        children.add(toggleSection(preferences.excludeAnonymous(), EXCLUDE_ANONYMOUS_ON, EXCLUDE_ANONYMOUS_OFF,
+                "advanced.anonymous", locale));
+        children.add(Separator.createDivider(Separator.Spacing.SMALL));
+        children.add(toggleSection(preferences.excludeDefaultAvatars(), EXCLUDE_AVATARS_ON, EXCLUDE_AVATARS_OFF,
+                "advanced.avatar", locale));
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
         children.add(Section.of(
                 Button.secondary(CONDITIONS, Messages.get(locale, "profile.button.edit")),
                 TextDisplay.of("**" + Messages.get(locale, "advanced.conditions.title") + "**\n-# "
                         + ConditionTexts.shortSummary(
-                                ConditionTexts.shortParts(profile.partnerConditions(), locale), locale))));
+                                ConditionTexts.shortParts(preferences.conditions(), locale), locale))));
         children.add(Separator.createDivider(Separator.Spacing.LARGE));
         children.add(ActionRow.of(Button.secondary(MAIN, Messages.get(locale, "advanced.button.back"))));
         return Container.of(children).withAccentColor(Cards.NEUTRAL_COLOR);
@@ -130,8 +135,8 @@ final class ProfileViews {
 
     private static Button toggleButton(boolean enabled, String onId, String offId, Locale locale) {
         return enabled
-                ? Button.danger(offId, Messages.get(locale, "match.button.disable"))
-                : Button.success(onId, Messages.get(locale, "match.button.enable"));
+                ? Button.secondary(offId, Messages.get(locale, "toggle.turn_off"))
+                : Button.secondary(onId, Messages.get(locale, "toggle.turn_on"));
     }
 
     private static String presentationText(Profile profile, Locale locale) {
@@ -140,10 +145,37 @@ final class ProfileViews {
                 : ">>> " + profile.presentation();
     }
 
-    private static String compatibilityText(Profile profile, Locale locale) {
-        return profile.minCompatibility() == null
+    private static String compatibilityText(PartnerPreferences preferences, Locale locale) {
+        return preferences.minCompatibility() == null
                 ? Messages.get(locale, "tag.no_minimum")
-                : Messages.format(locale, "advanced.compat.value", profile.minCompatibility());
+                : Messages.format(locale, "advanced.compat.value", preferences.minCompatibility());
+    }
+
+    private static Section toggleSection(boolean enabled, String onId, String offId, String keyPrefix, Locale locale) {
+        return Section.of(
+                toggleButton(enabled, onId, offId, locale),
+                TextDisplay.of("**" + Messages.get(locale, keyPrefix + ".title") + "**\n-# "
+                        + Messages.get(locale, enabled ? "toggle.on" : "toggle.off") + " · "
+                        + Messages.get(locale, keyPrefix + (enabled ? ".enabled" : ".disabled"))));
+    }
+
+    private static StringSelectMenu minCommonTagsSelect(int selected, Locale locale) {
+        List<SelectOption> options = IntStream.rangeClosed(0, ProfileService.MAX_MIN_COMMON_TAGS)
+                .mapToObj(count -> SelectOption.of(minCommonTagsLabel(count, locale), String.valueOf(count))
+                        .withDefault(count == selected))
+                .toList();
+        return StringSelectMenu.create(MIN_COMMON_TAGS)
+                .addOptions(options)
+                .setRequiredRange(1, 1)
+                .build();
+    }
+
+    private static String minCommonTagsLabel(int count, Locale locale) {
+        return switch (count) {
+            case 0 -> Messages.get(locale, "advanced.common.option.zero");
+            case 1 -> Messages.get(locale, "advanced.common.option.one");
+            default -> Messages.format(locale, "advanced.common.option.other", count);
+        };
     }
 
     private static StringSelectMenu tagSelect(String id, List<Tag> tags, Set<Long> selected, String placeholder) {

@@ -3,24 +3,30 @@ package io.github.sachachtrl.matchppl.service;
 import io.github.sachachtrl.matchppl.model.ActivityPeriod;
 import io.github.sachachtrl.matchppl.model.MemberConditions;
 import io.github.sachachtrl.matchppl.model.MemberSnapshot;
+import io.github.sachachtrl.matchppl.model.PartnerPreferences;
 import io.github.sachachtrl.matchppl.model.Profile;
 import io.github.sachachtrl.matchppl.model.Tag;
 import io.github.sachachtrl.matchppl.repository.ProfileRepository;
 
+import java.time.Clock;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 public class ProfileService {
     public static final int MAX_PRESENTATION_LENGTH = 300;
     public static final int MAX_COMPATIBILITY = 100;
+    public static final int MAX_MIN_COMMON_TAGS = 5;
 
     private final ProfileRepository profileRepo;
     private final TagService tagService;
+    private final Clock clock;
 
-    public ProfileService(ProfileRepository profileRepo, TagService tagService) {
+    public ProfileService(ProfileRepository profileRepo, TagService tagService, Clock clock) {
         this.profileRepo = profileRepo;
         this.tagService = tagService;
+        this.clock = clock;
     }
 
     public Profile getProfile(long guildId, long userId) {
@@ -32,7 +38,10 @@ public class ProfileService {
         if (searching && profile.tagIds().isEmpty()) {
             return false;
         }
-        this.profileRepo.save(profile.withSearching(searching));
+        if (searching == profile.searching()) {
+            return true;
+        }
+        this.profileRepo.save(profile.withSearching(searching, searching ? this.clock.instant() : null));
         return true;
     }
 
@@ -51,14 +60,14 @@ public class ProfileService {
         Set<Long> chosen = intersection(tagIds, usable);
         Profile profile = this.profileRepo.find(member.guildId(), member.userId());
         return this.saveTagSets(profile, chosen, TagService.without(profile.excludedTagIds(), chosen),
-                profile.requiredTagIds());
+                profile.preferences().requiredTagIds());
     }
 
     public Profile setExcludedTags(long guildId, long userId, Set<Long> tagIds) {
         Set<Long> excluded = intersection(tagIds, this.existingTagIds(guildId));
         Profile profile = this.profileRepo.find(guildId, userId);
         return this.saveTagSets(profile, TagService.without(profile.tagIds(), excluded), excluded,
-                TagService.without(profile.requiredTagIds(), excluded));
+                TagService.without(profile.preferences().requiredTagIds(), excluded));
     }
 
     public Profile setRequiredTags(long guildId, long userId, Set<Long> tagIds) {
@@ -74,18 +83,28 @@ public class ProfileService {
         return updated;
     }
 
-    public Profile setRequirePhoto(long guildId, long userId, boolean requirePhoto) {
-        Profile updated = this.profileRepo.find(guildId, userId).withRequirePhoto(requirePhoto);
-        this.profileRepo.save(updated);
-        return updated;
+    public Profile setExcludeAnonymous(long guildId, long userId, boolean exclude) {
+        return this.updatePreferences(guildId, userId, preferences -> preferences.withExcludeAnonymous(exclude));
+    }
+
+    public Profile setExcludeDefaultAvatars(long guildId, long userId, boolean exclude) {
+        return this.updatePreferences(guildId, userId, preferences -> preferences.withExcludeDefaultAvatars(exclude));
+    }
+
+    public boolean setMinCommonTags(long guildId, long userId, int count) {
+        if (count < 0 || count > MAX_MIN_COMMON_TAGS) {
+            return false;
+        }
+        this.updatePreferences(guildId, userId, preferences -> preferences.withMinCommonTags(count));
+        return true;
     }
 
     public boolean setMinCompatibility(long guildId, long userId, Integer percent) {
         if (percent != null && (percent < 0 || percent > MAX_COMPATIBILITY)) {
             return false;
         }
-        Profile profile = this.profileRepo.find(guildId, userId);
-        this.profileRepo.save(profile.withMinCompatibility(ConditionRules.positiveOrNull(percent)));
+        Integer value = ConditionRules.positiveOrNull(percent);
+        this.updatePreferences(guildId, userId, preferences -> preferences.withMinCompatibility(value));
         return true;
     }
 
@@ -93,8 +112,13 @@ public class ProfileService {
             Integer minMessages, ActivityPeriod period) {
         MemberConditions conditions = ConditionRules.withMinAccountAge(MemberConditions.NONE, minAccountAgeDays);
         conditions = ConditionRules.withMinMemberDays(conditions, minMemberDays);
-        conditions = ConditionRules.withActivity(conditions, minMessages, period);
-        Profile updated = this.profileRepo.find(guildId, userId).withPartnerConditions(conditions);
+        MemberConditions newConditions = ConditionRules.withActivity(conditions, minMessages, period);
+        return this.updatePreferences(guildId, userId, preferences -> preferences.withConditions(newConditions));
+    }
+
+    private Profile updatePreferences(long guildId, long userId, UnaryOperator<PartnerPreferences> change) {
+        Profile profile = this.profileRepo.find(guildId, userId);
+        Profile updated = profile.withPreferences(change.apply(profile.preferences()));
         this.profileRepo.save(updated);
         return updated;
     }
@@ -102,7 +126,7 @@ public class ProfileService {
     private Profile saveTagSets(Profile profile, Set<Long> chosen, Set<Long> excluded, Set<Long> required) {
         Profile updated = profile.withTagSets(chosen, excluded, required);
         if (chosen.isEmpty()) {
-            updated = updated.withSearching(false);
+            updated = updated.withSearching(false, null);
         }
         this.profileRepo.save(updated);
         return updated;

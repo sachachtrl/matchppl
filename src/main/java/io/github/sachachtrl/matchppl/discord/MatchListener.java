@@ -93,8 +93,14 @@ public class MatchListener extends ListenerAdapter {
                 this.profileService.setAnonymous(guildId, userId, id.equals(ProfileViews.ANONYMOUS_ON));
                 this.edit(event, this.mainView(member, locale));
             }
-            case ProfileViews.PHOTO_ON, ProfileViews.PHOTO_OFF -> {
-                this.profileService.setRequirePhoto(guildId, userId, id.equals(ProfileViews.PHOTO_ON));
+            case ProfileViews.EXCLUDE_ANONYMOUS_ON, ProfileViews.EXCLUDE_ANONYMOUS_OFF -> {
+                this.profileService.setExcludeAnonymous(guildId, userId,
+                        id.equals(ProfileViews.EXCLUDE_ANONYMOUS_ON));
+                this.edit(event, this.advancedView(member, locale));
+            }
+            case ProfileViews.EXCLUDE_AVATARS_ON, ProfileViews.EXCLUDE_AVATARS_OFF -> {
+                this.profileService.setExcludeDefaultAvatars(guildId, userId,
+                        id.equals(ProfileViews.EXCLUDE_AVATARS_ON));
                 this.edit(event, this.advancedView(member, locale));
             }
             case ProfileViews.ADVANCED -> this.edit(event, this.advancedView(member, locale));
@@ -117,6 +123,11 @@ public class MatchListener extends ListenerAdapter {
         Locale locale = Messages.DEFAULT_LOCALE;
         long guildId = member.getGuild().getIdLong();
         long userId = member.getIdLong();
+        if (id.equals(ProfileViews.MIN_COMMON_TAGS)) {
+            this.profileService.setMinCommonTags(guildId, userId, Integer.parseInt(event.getValues().getFirst()));
+            this.edit(event, this.advancedView(member, locale));
+            return;
+        }
         Set<Long> tagIds = event.getValues().stream().map(Long::parseLong).collect(Collectors.toSet());
         switch (id) {
             case ProfileViews.TAGS -> {
@@ -219,7 +230,9 @@ public class MatchListener extends ListenerAdapter {
                 .setRequired(false)
                 .setMaxLength(COMPATIBILITY_INPUT_LENGTH)
                 .setPlaceholder("0")
-                .setValue(profile.minCompatibility() == null ? null : String.valueOf(profile.minCompatibility()))
+                .setValue(profile.preferences().minCompatibility() == null
+                        ? null
+                        : String.valueOf(profile.preferences().minCompatibility()))
                 .build();
         return Modal.create(COMPATIBILITY_MODAL, Messages.get(locale, "modal.compat.title"))
                 .addComponents(Label.of(Messages.format(locale, "modal.compat.label"),
@@ -228,7 +241,7 @@ public class MatchListener extends ListenerAdapter {
     }
 
     private Modal conditionsModal(long guildId, long userId, Locale locale) {
-        MemberConditions conditions = this.profileService.getProfile(guildId, userId).partnerConditions();
+        MemberConditions conditions = this.profileService.getProfile(guildId, userId).preferences().conditions();
         String zeroHint = Messages.get(locale, "tag.modal.zero_hint");
         return Modal.create(CONDITIONS_MODAL, Messages.get(locale, "modal.conditions.title"))
                 .addComponents(
