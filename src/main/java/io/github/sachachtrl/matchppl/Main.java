@@ -7,6 +7,7 @@ import io.github.sachachtrl.matchppl.discord.MatchListener;
 import io.github.sachachtrl.matchppl.discord.MemberListener;
 import io.github.sachachtrl.matchppl.discord.ProposalListener;
 import io.github.sachachtrl.matchppl.discord.ProposalMessenger;
+import io.github.sachachtrl.matchppl.discord.ResetListener;
 import io.github.sachachtrl.matchppl.discord.TagListener;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 import io.github.sachachtrl.matchppl.repository.Database;
@@ -106,6 +107,7 @@ public class Main {
         ProposalMessenger messenger = new ProposalMessenger(proposalService, profileService, tagService);
         ProposalListener proposalListener = new ProposalListener(proposalService, messenger);
         MemberListener memberListener = new MemberListener(profileService, proposalService, messenger);
+        ResetListener resetListener = new ResetListener(proposalService, guildConfigService);
         InteractionTimer interactionTimer = new InteractionTimer(clock);
 
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
@@ -115,7 +117,7 @@ public class Main {
                 .setHttpClientBuilder(new OkHttpClient.Builder().pingInterval(HTTP_PING_INTERVAL))
                 .addEventListeners(interactionTimer.arrivalListener())
                 .addEventListeners(activityListener, matchListener, adminListener, tagListener, proposalListener,
-                        memberListener)
+                        memberListener, resetListener)
                 .addEventListeners(interactionTimer.completionListener());
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
             Thread thread = new Thread(runnable, "matchmaking");
@@ -133,7 +135,9 @@ public class Main {
                             AdminListener.removeAdminCommand(),
                             AdminListener.listAdminCommand(),
                             TagListener.newTagCommand(),
-                            TagListener.tagsCommand())
+                            TagListener.tagsCommand(),
+                            ResetListener.resetCommand(),
+                            ResetListener.resetAllCommand())
                     .queue();
             scheduler.scheduleAtFixedRate(new MatchmakingTask(bot, proposalService, matchmakingService, messenger),
                     FIRST_ROUND_DELAY_SECONDS, ROUND_PERIOD_SECONDS, TimeUnit.SECONDS);

@@ -19,6 +19,14 @@ public interface ProposalRepository {
 
     Set<UserPair> findBlockedPairs(long guildId);
 
+    int countBlockedPairs(long guildId);
+
+    int countBlockedPairsInvolving(long guildId, long userId);
+
+    void unblockAll(long guildId);
+
+    void unblockInvolving(long guildId, long userId);
+
     List<Proposal> findExpired(Instant now);
 
     List<Proposal> findOpenInvolving(long guildId, long userId);

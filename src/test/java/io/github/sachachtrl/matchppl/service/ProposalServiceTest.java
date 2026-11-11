@@ -241,4 +241,53 @@ class ProposalServiceTest {
         assertEquals(111L, updated.messageIdOf(ALICE));
         assertEquals(222L, updated.messageIdOf(BOB));
     }
+
+    private void endWithoutMatch(long first, long second) {
+        this.propose(first, second);
+        this.clock.advance(DELAY);
+        this.service.expireDue();
+    }
+
+    @Test
+    void aPairBlockedTwiceInBothOrdersCountsOnce() {
+        this.endWithoutMatch(ALICE, BOB);
+        this.service.resetAllBlocks(GUILD);
+        this.endWithoutMatch(BOB, ALICE);
+        this.endWithoutMatch(ALICE, CAROL);
+
+        assertEquals(2, this.service.countBlockedPairs(GUILD));
+        assertEquals(1, this.service.countBlockedPairs(GUILD, BOB));
+    }
+
+    @Test
+    void resettingAMemberOnlyLiftsTheirOwnBlocks() {
+        this.endWithoutMatch(ALICE, BOB);
+        this.endWithoutMatch(CAROL, ALICE);
+        this.endWithoutMatch(BOB, CAROL);
+
+        assertEquals(2, this.service.resetBlocks(GUILD, ALICE));
+
+        assertEquals(Set.of(new UserPair(BOB, CAROL)), this.service.blockedPairs(GUILD));
+    }
+
+    @Test
+    void resettingTheServerLiftsEveryBlock() {
+        this.endWithoutMatch(ALICE, BOB);
+        this.endWithoutMatch(BOB, CAROL);
+
+        assertEquals(2, this.service.resetAllBlocks(GUILD));
+
+        assertTrue(this.service.blockedPairs(GUILD).isEmpty());
+        assertEquals(0, this.service.resetAllBlocks(GUILD));
+    }
+
+    @Test
+    void resettingDoesNotTouchOngoingProposals() {
+        Proposal ongoing = this.propose(ALICE, BOB);
+
+        this.service.resetAllBlocks(GUILD);
+
+        assertEquals(ProposalStatus.OPEN, this.reload(ongoing).status());
+        assertEquals(Set.of(ALICE, BOB), this.service.busyUsers(GUILD));
+    }
 }

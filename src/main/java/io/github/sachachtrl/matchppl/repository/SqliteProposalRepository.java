@@ -44,7 +44,7 @@ public class SqliteProposalRepository implements ProposalRepository {
             WHERE guild_id = ? AND status = 'OPEN' AND second_answer IN ('PENDING', 'ACCEPTED')
             """;
     private static final String WHERE_BLOCKING = """
-            WHERE guild_id = ? AND (
+            WHERE guild_id = ? AND unblocked = 0 AND (
                 status = 'NO_MATCH'
                 OR (status = 'OPEN' AND (first_answer IN ('SKIPPED', 'CANCELLED')
                                          OR second_answer IN ('SKIPPED', 'CANCELLED'))))
@@ -52,6 +52,19 @@ public class SqliteProposalRepository implements ProposalRepository {
     private static final String FIND_BLOCKED_SQL = """
             SELECT first_user_id, second_user_id FROM proposal
             """ + WHERE_BLOCKING;
+    private static final String COUNT_BLOCKED_SQL = """
+            SELECT COUNT(DISTINCT MIN(first_user_id, second_user_id) || ':' || MAX(first_user_id, second_user_id))
+            FROM proposal
+            """ + WHERE_BLOCKING;
+    private static final String COUNT_BLOCKED_INVOLVING_SQL = COUNT_BLOCKED_SQL + """
+            AND (first_user_id = ? OR second_user_id = ?)
+            """;
+    private static final String UNBLOCK_SQL = """
+            UPDATE proposal SET unblocked = 1
+            """ + WHERE_BLOCKING;
+    private static final String UNBLOCK_INVOLVING_SQL = UNBLOCK_SQL + """
+            AND (first_user_id = ? OR second_user_id = ?)
+            """;
     private static final String UPDATE_FIRST_ANSWER_SQL = """
             UPDATE proposal SET first_answer = ?
             WHERE id = ? AND status = 'OPEN' AND first_user_id = ? AND first_answer = ?
@@ -155,6 +168,26 @@ public class SqliteProposalRepository implements ProposalRepository {
     }
 
     @Override
+    public int countBlockedPairs(long guildId) {
+        return this.executeCount(COUNT_BLOCKED_SQL, guildId, null);
+    }
+
+    @Override
+    public int countBlockedPairsInvolving(long guildId, long userId) {
+        return this.executeCount(COUNT_BLOCKED_INVOLVING_SQL, guildId, userId);
+    }
+
+    @Override
+    public void unblockAll(long guildId) {
+        this.executeUnblock(UNBLOCK_SQL, guildId, null);
+    }
+
+    @Override
+    public void unblockInvolving(long guildId, long userId) {
+        this.executeUnblock(UNBLOCK_INVOLVING_SQL, guildId, userId);
+    }
+
+    @Override
     public List<Proposal> findExpired(Instant now) {
         synchronized (this.connection) {
             try (PreparedStatement statement = this.connection.prepareStatement(FIND_EXPIRED_SQL)) {
@@ -227,6 +260,39 @@ public class SqliteProposalRepository implements ProposalRepository {
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to save proposal message", e);
             }
+        }
+    }
+
+    private int executeCount(String sql, long guildId, Long userId) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(sql)) {
+                setGuildAndUser(statement, guildId, userId);
+                try (ResultSet result = statement.executeQuery()) {
+                    result.next();
+                    return result.getInt(1);
+                }
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to count blocked pairs", e);
+            }
+        }
+    }
+
+    private void executeUnblock(String sql, long guildId, Long userId) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(sql)) {
+                setGuildAndUser(statement, guildId, userId);
+                statement.executeUpdate();
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to unblock pairs", e);
+            }
+        }
+    }
+
+    private static void setGuildAndUser(PreparedStatement statement, long guildId, Long userId) throws SQLException {
+        statement.setLong(1, guildId);
+        if (userId != null) {
+            statement.setLong(2, userId);
+            statement.setLong(3, userId);
         }
     }
 

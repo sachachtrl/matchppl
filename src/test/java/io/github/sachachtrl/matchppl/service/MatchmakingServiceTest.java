@@ -144,4 +144,18 @@ class MatchmakingServiceTest {
 
         assertTrue(this.round(Set.of(ALICE, BOB)).isEmpty());
     }
+
+    @Test
+    void aSkippedPairCanBeProposedAgainAfterAReset() {
+        this.startSearching(ALICE);
+        this.startSearching(BOB);
+        Proposal proposal = this.round(Set.of(ALICE, BOB)).getFirst();
+        this.proposalService.answer(proposal.id(), ALICE, ProposalService.Action.SKIP);
+        this.proposalService.answer(proposal.id(), BOB, ProposalService.Action.SKIP);
+
+        assertEquals(1, this.proposalService.resetBlocks(GUILD, ALICE));
+        this.clock.advance(Duration.ofMinutes(1));
+
+        assertEquals(1, this.round(Set.of(ALICE, BOB)).size());
+    }
 }

@@ -5,12 +5,10 @@ import io.github.sachachtrl.matchppl.model.Tag;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
 import io.github.sachachtrl.matchppl.service.TagService;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
@@ -271,9 +269,7 @@ public class TagListener extends ListenerAdapter {
     }
 
     private boolean isAdmin(Member member) {
-        List<Long> roleIds = member.getRoles().stream().map(Role::getIdLong).toList();
-        return this.guildConfigService.isAdmin(member.getGuild().getIdLong(), roleIds,
-                member.hasPermission(Permission.MANAGE_SERVER));
+        return AdminAccess.isAdmin(this.guildConfigService, member);
     }
 
     private void replyInvalidEmoji(IReplyCallback event, String input, Locale locale) {

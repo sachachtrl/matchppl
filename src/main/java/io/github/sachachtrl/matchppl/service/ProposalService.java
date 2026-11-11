@@ -115,6 +115,26 @@ public class ProposalService {
         return this.proposalRepo.findBlockedPairs(guildId);
     }
 
+    public int countBlockedPairs(long guildId) {
+        return this.proposalRepo.countBlockedPairs(guildId);
+    }
+
+    public int countBlockedPairs(long guildId, long userId) {
+        return this.proposalRepo.countBlockedPairsInvolving(guildId, userId);
+    }
+
+    public synchronized int resetAllBlocks(long guildId) {
+        int count = this.proposalRepo.countBlockedPairs(guildId);
+        this.proposalRepo.unblockAll(guildId);
+        return count;
+    }
+
+    public synchronized int resetBlocks(long guildId, long userId) {
+        int count = this.proposalRepo.countBlockedPairsInvolving(guildId, userId);
+        this.proposalRepo.unblockInvolving(guildId, userId);
+        return count;
+    }
+
     public void recordMessage(long proposalId, long userId, long messageId) {
         this.proposalRepo.setMessageId(proposalId, userId, messageId);
     }
