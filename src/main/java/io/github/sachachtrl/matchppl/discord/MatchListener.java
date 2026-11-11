@@ -273,6 +273,7 @@ public class MatchListener extends ListenerAdapter {
                 member.getIdLong(),
                 member.getUser().getTimeCreated().toInstant(),
                 member.getTimeJoined().toInstant(),
-                member.getRoles().stream().map(Role::getIdLong).collect(Collectors.toSet()));
+                member.getRoles().stream().map(Role::getIdLong).collect(Collectors.toSet()),
+                member.getUser().getAvatarId() != null);
     }
 }

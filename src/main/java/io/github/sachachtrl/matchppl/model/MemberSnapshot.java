@@ -8,7 +8,8 @@ public record MemberSnapshot(
         long userId,
         Instant accountCreatedAt,
         Instant joinedAt,
-        Set<Long> roleIds) {
+        Set<Long> roleIds,
+        boolean customAvatar) {
 
     public MemberSnapshot {
         roleIds = Set.copyOf(roleIds);

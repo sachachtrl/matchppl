@@ -56,7 +56,7 @@ class TagServiceTest {
 
     private static MemberSnapshot member(int accountAgeDays, int memberDays, Set<Long> roles) {
         return new MemberSnapshot(GUILD, USER, NOW.minus(Duration.ofDays(accountAgeDays)),
-                NOW.minus(Duration.ofDays(memberDays)), roles);
+                NOW.minus(Duration.ofDays(memberDays)), roles, true);
     }
 
     @Test

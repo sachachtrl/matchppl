@@ -29,7 +29,7 @@ class ProfileServiceTest {
     private static final long USER = 10L;
     private static final long VERIFIED_ROLE = 100L;
     private static final Instant NOW = Instant.parse("2026-11-11T12:00:00Z");
-    private static final MemberSnapshot MEMBER = new MemberSnapshot(GUILD, USER, NOW, NOW, Set.of());
+    private static final MemberSnapshot MEMBER = new MemberSnapshot(GUILD, USER, NOW, NOW, Set.of(), true);
 
     private Database database;
     private TagService tagService;
