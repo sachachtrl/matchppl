@@ -2,32 +2,48 @@ package io.github.sachachtrl.matchppl;
 
 import io.github.sachachtrl.matchppl.discord.ActivityListener;
 import io.github.sachachtrl.matchppl.discord.AdminListener;
+import io.github.sachachtrl.matchppl.discord.InteractionTimer;
 import io.github.sachachtrl.matchppl.discord.MatchListener;
+import io.github.sachachtrl.matchppl.discord.MemberListener;
+import io.github.sachachtrl.matchppl.discord.ProposalListener;
+import io.github.sachachtrl.matchppl.discord.ProposalMessenger;
 import io.github.sachachtrl.matchppl.discord.TagListener;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.GuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.ProfileRepository;
+import io.github.sachachtrl.matchppl.repository.ProposalRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteActivityRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteProposalRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteTagRepository;
 import io.github.sachachtrl.matchppl.repository.TagRepository;
 import io.github.sachachtrl.matchppl.repository.TextCipher;
+import io.github.sachachtrl.matchppl.scheduler.MatchmakingTask;
 import io.github.sachachtrl.matchppl.service.ActivityService;
 import io.github.sachachtrl.matchppl.service.ConditionChecker;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
+import io.github.sachachtrl.matchppl.service.MatchingService;
+import io.github.sachachtrl.matchppl.service.MatchmakingService;
 import io.github.sachachtrl.matchppl.service.ProfileService;
+import io.github.sachachtrl.matchppl.service.ProposalService;
 import io.github.sachachtrl.matchppl.service.TagService;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.utils.ChunkingFilter;
+import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import okhttp3.OkHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +53,8 @@ public class Main {
 
     private static final Duration HTTP_PING_INTERVAL = Duration.ofSeconds(15);
     private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(10);
+    private static final long FIRST_ROUND_DELAY_SECONDS = 10;
+    private static final long ROUND_PERIOD_SECONDS = 60;
 
     public void main() throws InterruptedException {
         Dotenv env = Dotenv.configure().ignoreIfMissing().load();
@@ -61,25 +79,52 @@ public class Main {
             System.exit(1);
             return;
         }
+        Clock clock = Clock.systemUTC();
+
         ActivityRepository activityRepo = new SqliteActivityRepository(database);
         ActivityService activityService = new ActivityService(activityRepo);
         ActivityListener activityListener = new ActivityListener(activityService);
-        ConditionChecker conditionChecker = new ConditionChecker(activityService, Clock.systemUTC());
+        ConditionChecker conditionChecker = new ConditionChecker(activityService, clock);
+
         GuildConfigRepository guildConfigRepo = new SqliteGuildConfigRepository(database);
         GuildConfigService guildConfigService = new GuildConfigService(guildConfigRepo);
         AdminListener adminListener = new AdminListener(guildConfigService);
+
         TagRepository tagRepo = new SqliteTagRepository(database);
         TagService tagService = new TagService(tagRepo, conditionChecker);
         TagListener tagListener = new TagListener(tagService, guildConfigService);
+
         ProfileRepository profileRepo = new SqliteProfileRepository(database, cipher);
-        ProfileService profileService = new ProfileService(profileRepo, tagService, Clock.systemUTC());
+        ProfileService profileService = new ProfileService(profileRepo, tagService, clock);
         MatchListener matchListener = new MatchListener(profileService, tagService);
+
+        ProposalRepository proposalRepo = new SqliteProposalRepository(database);
+        ProposalService proposalService = new ProposalService(proposalRepo, profileService, clock);
+        MatchingService matchingService = new MatchingService(conditionChecker, new SecureRandom());
+        MatchmakingService matchmakingService = new MatchmakingService(profileService, tagService, matchingService,
+                proposalService, guildConfigService, clock);
+        ProposalMessenger messenger = new ProposalMessenger(proposalService, profileService, tagService);
+        ProposalListener proposalListener = new ProposalListener(proposalService, messenger);
+        MemberListener memberListener = new MemberListener(profileService, proposalService, messenger);
+        InteractionTimer interactionTimer = new InteractionTimer(clock);
+
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
+                .enableIntents(GatewayIntent.GUILD_MEMBERS)
+                .setMemberCachePolicy(MemberCachePolicy.ALL)
+                .setChunkingFilter(ChunkingFilter.ALL)
                 .setHttpClientBuilder(new OkHttpClient.Builder().pingInterval(HTTP_PING_INTERVAL))
-                .addEventListeners(activityListener, matchListener, adminListener, tagListener);
+                .addEventListeners(interactionTimer.arrivalListener())
+                .addEventListeners(activityListener, matchListener, adminListener, tagListener, proposalListener,
+                        memberListener)
+                .addEventListeners(interactionTimer.completionListener());
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "matchmaking");
+            thread.setDaemon(true);
+            return thread;
+        });
         try {
             JDA bot = builder.build();
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(bot, database)));
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(bot, database, scheduler)));
             bot.awaitReady();
             bot.updateCommands()
                     .addCommands(
@@ -90,6 +135,8 @@ public class Main {
                             TagListener.newTagCommand(),
                             TagListener.tagsCommand())
                     .queue();
+            scheduler.scheduleAtFixedRate(new MatchmakingTask(bot, proposalService, matchmakingService, messenger),
+                    FIRST_ROUND_DELAY_SECONDS, ROUND_PERIOD_SECONDS, TimeUnit.SECONDS);
             log.info("Bot is logged in as {}", bot.getSelfUser().getAsTag());
         } catch (InvalidTokenException e) {
             log.error("Invalid token: {}", e.getMessage());
@@ -97,8 +144,9 @@ public class Main {
         }
     }
 
-    private static void shutdown(JDA bot, Database database) {
+    private static void shutdown(JDA bot, Database database, ScheduledExecutorService scheduler) {
         log.info("Shutting down");
+        scheduler.shutdownNow();
         bot.shutdown();
         try {
             if (!bot.awaitShutdown(SHUTDOWN_TIMEOUT)) {

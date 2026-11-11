@@ -8,6 +8,7 @@ final class Cards {
     static final int NEUTRAL_COLOR = 0x5865F2;
     static final int WARNING_COLOR = 0xFEE75C;
     static final int ERROR_COLOR = 0xED4245;
+    static final int MUTED_COLOR = 0x80848E;
 
     private Cards() {
     }

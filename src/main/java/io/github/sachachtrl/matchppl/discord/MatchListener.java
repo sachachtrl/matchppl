@@ -1,7 +1,6 @@
 package io.github.sachachtrl.matchppl.discord;
 
 import io.github.sachachtrl.matchppl.model.MemberConditions;
-import io.github.sachachtrl.matchppl.model.MemberSnapshot;
 import io.github.sachachtrl.matchppl.model.Profile;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 import io.github.sachachtrl.matchppl.service.TagService;
@@ -14,7 +13,6 @@ import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.textinput.TextInput;
 import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -131,7 +129,7 @@ public class MatchListener extends ListenerAdapter {
         Set<Long> tagIds = event.getValues().stream().map(Long::parseLong).collect(Collectors.toSet());
         switch (id) {
             case ProfileViews.TAGS -> {
-                this.profileService.setTags(snapshot(member), tagIds);
+                this.profileService.setTags(MemberSnapshots.of(member), tagIds);
                 this.edit(event, this.mainView(member, locale));
             }
             case ProfileViews.EXCLUDED -> {
@@ -199,7 +197,7 @@ public class MatchListener extends ListenerAdapter {
     private Container mainView(Member member, Locale locale) {
         long guildId = member.getGuild().getIdLong();
         Profile profile = this.profileService.getProfile(guildId, member.getIdLong());
-        return ProfileViews.mainCard(profile, this.tagService.usableTags(snapshot(member)),
+        return ProfileViews.mainCard(profile, this.tagService.usableTags(MemberSnapshots.of(member)),
                 this.tagService.listTags(guildId), locale);
     }
 
@@ -265,15 +263,5 @@ public class MatchListener extends ListenerAdapter {
                 .useComponentsV2()
                 .setEphemeral(true)
                 .queue();
-    }
-
-    private static MemberSnapshot snapshot(Member member) {
-        return new MemberSnapshot(
-                member.getGuild().getIdLong(),
-                member.getIdLong(),
-                member.getUser().getTimeCreated().toInstant(),
-                member.getTimeJoined().toInstant(),
-                member.getRoles().stream().map(Role::getIdLong).collect(Collectors.toSet()),
-                member.getUser().getAvatarId() != null);
     }
 }

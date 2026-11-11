@@ -130,6 +130,9 @@ final class ProfileViews {
             return Messages.get(locale, "profile.search.enabled");
         }
         String text = Messages.get(locale, "profile.search.disabled");
+        if (profile.dmUnreachable()) {
+            text += "\n-# " + Messages.get(locale, "profile.search.unreachable");
+        }
         return profile.tagIds().isEmpty() ? text + "\n-# " + Messages.get(locale, "profile.search.needs_tags") : text;
     }
 

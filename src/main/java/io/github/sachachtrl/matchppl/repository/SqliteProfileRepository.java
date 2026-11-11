@@ -12,7 +12,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +29,7 @@ public class SqliteProfileRepository implements ProfileRepository {
     private static final String FIND_SQL = """
             SELECT searching, presentation, anonymous, min_compatibility, exclude_anonymous,
                    min_account_age_days, min_member_days, min_messages, activity_period,
-                   exclude_default_avatars, min_common_tags, waiting_since
+                   exclude_default_avatars, min_common_tags, waiting_since, dm_unreachable
             FROM profile
             WHERE guild_id = ? AND user_id = ?
             """;
@@ -37,8 +39,9 @@ public class SqliteProfileRepository implements ProfileRepository {
     private static final String SAVE_SQL = """
             INSERT INTO profile (guild_id, user_id, searching, presentation, anonymous, min_compatibility,
                                  exclude_anonymous, min_account_age_days, min_member_days, min_messages,
-                                 activity_period, exclude_default_avatars, min_common_tags, waiting_since)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 activity_period, exclude_default_avatars, min_common_tags, waiting_since,
+                                 dm_unreachable)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (guild_id, user_id) DO UPDATE SET
                 searching = excluded.searching,
                 presentation = excluded.presentation,
@@ -51,10 +54,17 @@ public class SqliteProfileRepository implements ProfileRepository {
                 activity_period = excluded.activity_period,
                 exclude_default_avatars = excluded.exclude_default_avatars,
                 min_common_tags = excluded.min_common_tags,
-                waiting_since = excluded.waiting_since
+                waiting_since = excluded.waiting_since,
+                dm_unreachable = excluded.dm_unreachable
             """;
     private static final String DELETE_TAGS_SQL = """
             DELETE FROM profile_tag WHERE guild_id = ? AND user_id = ?
+            """;
+    private static final String FIND_SEARCHING_SQL = """
+            SELECT user_id FROM profile WHERE guild_id = ? AND searching = 1
+            """;
+    private static final String DELETE_SQL = """
+            DELETE FROM profile WHERE guild_id = ? AND user_id = ?
             """;
     private static final String INSERT_TAG_SQL = """
             INSERT INTO profile_tag (guild_id, user_id, tag_id, kind) VALUES (?, ?, ?, ?)
@@ -101,6 +111,7 @@ public class SqliteProfileRepository implements ProfileRepository {
                             userId,
                             result.getBoolean(1),
                             waitingSince == null ? null : Instant.parse(waitingSince),
+                            result.getBoolean(13),
                             this.decryptPresentation(result.getString(2), guildId, userId),
                             result.getBoolean(3),
                             chosen,
@@ -109,6 +120,53 @@ public class SqliteProfileRepository implements ProfileRepository {
                 }
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to read profile", e);
+            }
+        }
+    }
+
+    @Override
+    public List<Profile> findSearching(long guildId) {
+        synchronized (this.connection) {
+            List<Long> userIds = new ArrayList<>();
+            try (PreparedStatement statement = this.connection.prepareStatement(FIND_SEARCHING_SQL)) {
+                statement.setLong(1, guildId);
+                try (ResultSet result = statement.executeQuery()) {
+                    while (result.next()) {
+                        userIds.add(result.getLong(1));
+                    }
+                }
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to list searching profiles", e);
+            }
+            return userIds.stream().map(userId -> this.find(guildId, userId)).toList();
+        }
+    }
+
+    @Override
+    public void delete(long guildId, long userId) {
+        synchronized (this.connection) {
+            try {
+                this.connection.setAutoCommit(false);
+                try {
+                    try (PreparedStatement statement = this.connection.prepareStatement(DELETE_TAGS_SQL)) {
+                        statement.setLong(1, guildId);
+                        statement.setLong(2, userId);
+                        statement.executeUpdate();
+                    }
+                    try (PreparedStatement statement = this.connection.prepareStatement(DELETE_SQL)) {
+                        statement.setLong(1, guildId);
+                        statement.setLong(2, userId);
+                        statement.executeUpdate();
+                    }
+                    this.connection.commit();
+                } catch (SQLException e) {
+                    this.connection.rollback();
+                    throw e;
+                } finally {
+                    this.connection.setAutoCommit(true);
+                }
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to delete profile", e);
             }
         }
     }
@@ -154,6 +212,7 @@ public class SqliteProfileRepository implements ProfileRepository {
             statement.setBoolean(12, preferences.excludeDefaultAvatars());
             statement.setInt(13, preferences.minCommonTags());
             statement.setString(14, profile.waitingSince() == null ? null : profile.waitingSince().toString());
+            statement.setBoolean(15, profile.dmUnreachable());
             statement.executeUpdate();
         }
     }

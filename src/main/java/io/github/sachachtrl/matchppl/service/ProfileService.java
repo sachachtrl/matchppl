@@ -10,6 +10,7 @@ import io.github.sachachtrl.matchppl.repository.ProfileRepository;
 
 import java.time.Clock;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -41,8 +42,22 @@ public class ProfileService {
         if (searching == profile.searching()) {
             return true;
         }
-        this.profileRepo.save(profile.withSearching(searching, searching ? this.clock.instant() : null));
+        Profile updated = profile.withSearching(searching, searching ? this.clock.instant() : null);
+        this.profileRepo.save(searching ? updated.withDmUnreachable(false) : updated);
         return true;
+    }
+
+    public List<Profile> searchingProfiles(long guildId) {
+        return this.profileRepo.findSearching(guildId);
+    }
+
+    public void markUnreachable(long guildId, long userId) {
+        Profile profile = this.profileRepo.find(guildId, userId);
+        this.profileRepo.save(profile.withSearching(false, null).withDmUnreachable(true));
+    }
+
+    public void deleteProfile(long guildId, long userId) {
+        this.profileRepo.delete(guildId, userId);
     }
 
     public void restartWaiting(long guildId, long userId) {

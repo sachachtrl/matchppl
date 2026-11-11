@@ -217,4 +217,18 @@ class ProfileServiceTest {
         assertTrue(updated.preferences().excludeDefaultAvatars());
         assertFalse(this.service.setExcludeAnonymous(GUILD, USER, false).preferences().excludeAnonymous());
     }
+
+    @Test
+    void unreachableMemberStopsSearchingUntilEnablingItAgain() {
+        this.service.setTags(MEMBER, Set.of(this.finals.id()));
+        this.service.setSearching(GUILD, USER, true);
+
+        this.service.markUnreachable(GUILD, USER);
+        Profile unreachable = this.service.getProfile(GUILD, USER);
+        assertFalse(unreachable.searching());
+        assertTrue(unreachable.dmUnreachable());
+
+        this.service.setSearching(GUILD, USER, true);
+        assertFalse(this.service.getProfile(GUILD, USER).dmUnreachable());
+    }
 }

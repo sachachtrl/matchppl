@@ -9,6 +9,7 @@ import java.util.Set;
 public class GuildConfigService {
     public static final Duration DEFAULT_RESPONSE_DELAY = Duration.ofHours(24);
     public static final Duration DEFAULT_ROOM_LIFETIME = Duration.ofHours(24);
+    public static final Duration DEFAULT_MATCHING_INTERVAL = Duration.ofMinutes(1);
 
     private final GuildConfigRepository guildConfigRepo;
 
@@ -30,6 +31,10 @@ public class GuildConfigService {
 
     public Duration roomLifetime(long guildId) {
         return DEFAULT_ROOM_LIFETIME;
+    }
+
+    public Duration matchingInterval(long guildId) {
+        return DEFAULT_MATCHING_INTERVAL;
     }
 
     public Set<Long> listAdminRoles(long guildId) {

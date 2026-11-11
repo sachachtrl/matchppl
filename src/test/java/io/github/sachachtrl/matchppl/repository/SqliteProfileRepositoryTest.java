@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,8 +54,8 @@ class SqliteProfileRepositoryTest {
     void savedProfileIsReadBackIdentically() {
         PartnerPreferences preferences = new PartnerPreferences(Set.of(1L), 50, 2, true, true,
                 new MemberConditions(30, 7, 20, ActivityPeriod.TWO_WEEKS));
-        Profile profile = new Profile(GUILD, USER, true, Instant.parse("2026-11-11T12:00:00Z"), "Chill player", true,
-                Set.of(1L, 2L), Set.of(3L), preferences);
+        Profile profile = new Profile(GUILD, USER, true, Instant.parse("2026-11-11T12:00:00Z"), true, "Chill player",
+                true, Set.of(1L, 2L), Set.of(3L), preferences);
 
         this.repository.save(profile);
 
@@ -110,5 +111,25 @@ class SqliteProfileRepositoryTest {
         Profile found = this.repository.find(GUILD, USER);
         assertEquals(Set.of(lille.id()), found.tagIds());
         assertTrue(found.preferences().requiredTagIds().isEmpty());
+    }
+
+    @Test
+    void onlySearchingProfilesOfTheGuildAreListed() {
+        Instant since = Instant.parse("2026-11-11T12:00:00Z");
+        this.repository.save(Profile.empty(GUILD, USER).withSearching(true, since));
+        this.repository.save(Profile.empty(GUILD, USER + 1));
+        this.repository.save(Profile.empty(OTHER_GUILD, USER + 2).withSearching(true, since));
+
+        assertEquals(List.of(USER), this.repository.findSearching(GUILD).stream().map(Profile::userId).toList());
+    }
+
+    @Test
+    void deletingAProfileRemovesItsTagsToo() {
+        this.repository.save(Profile.empty(GUILD, USER).withPresentation("Hello")
+                .withTagSets(Set.of(1L), Set.of(2L), Set.of()));
+
+        this.repository.delete(GUILD, USER);
+
+        assertEquals(Profile.empty(GUILD, USER), this.repository.find(GUILD, USER));
     }
 }
