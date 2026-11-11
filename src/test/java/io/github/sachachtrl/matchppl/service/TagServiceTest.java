@@ -113,6 +113,16 @@ class TagServiceTest {
     }
 
     @Test
+    void deletedTagNameCanBeReused() {
+        Tag tag = this.createTag("Fortnite");
+
+        assertTrue(this.service.deleteTag(GUILD, tag.id()));
+
+        assertTrue(this.service.listTags(GUILD).isEmpty());
+        assertInstanceOf(TagService.Created.class, this.service.createTag(GUILD, "Fortnite", "🎮"));
+    }
+
+    @Test
     void updatingAnUnknownTagReturnsNothing() {
         assertTrue(this.service.setMinMemberDays(GUILD, 999L, 7).isEmpty());
     }

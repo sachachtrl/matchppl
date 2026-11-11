@@ -67,7 +67,8 @@ public class Main {
                             MatchListener.command(),
                             AdminListener.setAdminCommand(),
                             AdminListener.removeAdminCommand(),
-                            TagListener.command())
+                            TagListener.newTagCommand(),
+                            TagListener.tagsCommand())
                     .queue();
             log.info("Bot is logged in as {}", bot.getSelfUser().getAsTag());
         } catch (InvalidTokenException e) {

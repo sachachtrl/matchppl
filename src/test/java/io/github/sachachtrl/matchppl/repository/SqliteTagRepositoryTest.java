@@ -4,6 +4,7 @@ import io.github.sachachtrl.matchppl.model.ActivityPeriod;
 import io.github.sachachtrl.matchppl.model.Tag;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,6 +82,44 @@ class SqliteTagRepositoryTest {
         assertEquals(ActivityPeriod.TWO_WEEKS, found.activityPeriod());
         assertEquals(Set.of(100L, 101L), found.requiredRoleIds());
         assertEquals(Set.of(200L), found.forbiddenRoleIds());
+    }
+
+    @Test
+    void tagsOfAGuildAreListedByName() {
+        this.repository.create(GUILD, "lille", "🏙️");
+        this.repository.create(GUILD, "Fortnite", "🎮");
+        this.repository.create(GUILD, "Board games", "🎲");
+        this.repository.create(OTHER_GUILD, "Cinema", "🎬");
+
+        List<String> names = this.repository.findByGuild(GUILD).stream().map(Tag::name).toList();
+
+        assertEquals(List.of("Board games", "Fortnite", "lille"), names);
+    }
+
+    @Test
+    void deletingATagRemovesItAndItsRoles() {
+        Tag created = this.repository.create(GUILD, "Fortnite", "🎮");
+        this.repository.update(created.withRoles(Set.of(100L), Set.of(200L)));
+
+        assertTrue(this.repository.delete(GUILD, created.id()));
+
+        assertTrue(this.repository.findById(GUILD, created.id()).isEmpty());
+        assertFalse(this.repository.existsByName(GUILD, "Fortnite"));
+        Tag recreated = this.repository.create(GUILD, "Fortnite", "🎮");
+        assertTrue(this.repository.findById(GUILD, recreated.id()).orElseThrow().requiredRoleIds().isEmpty());
+    }
+
+    @Test
+    void aTagCannotBeDeletedFromAnotherGuild() {
+        Tag created = this.repository.create(GUILD, "Fortnite", "🎮");
+
+        assertFalse(this.repository.delete(OTHER_GUILD, created.id()));
+        assertTrue(this.repository.findById(GUILD, created.id()).isPresent());
+    }
+
+    @Test
+    void deletingAnUnknownTagReportsNoChange() {
+        assertFalse(this.repository.delete(GUILD, 999L));
     }
 
     @Test

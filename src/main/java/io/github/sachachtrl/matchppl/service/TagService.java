@@ -5,6 +5,7 @@ import io.github.sachachtrl.matchppl.model.Tag;
 import io.github.sachachtrl.matchppl.repository.TagRepository;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
@@ -40,6 +41,14 @@ public class TagService {
 
     public Optional<Tag> findTag(long guildId, long tagId) {
         return this.tagRepo.findById(guildId, tagId);
+    }
+
+    public List<Tag> listTags(long guildId) {
+        return this.tagRepo.findByGuild(guildId);
+    }
+
+    public boolean deleteTag(long guildId, long tagId) {
+        return this.tagRepo.delete(guildId, tagId);
     }
 
     public Optional<Tag> setMinAccountAge(long guildId, long tagId, Integer days) {

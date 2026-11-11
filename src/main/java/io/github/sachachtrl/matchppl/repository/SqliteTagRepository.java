@@ -8,7 +8,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -22,10 +24,17 @@ public class SqliteTagRepository implements TagRepository {
             VALUES (?, ?, ?, ?)
             RETURNING id
             """;
-    private static final String FIND_SQL = """
-            SELECT name, emoji, min_account_age_days, min_member_days, min_messages, activity_period
+    private static final String TAG_COLUMNS = """
+            id, name, emoji, min_account_age_days, min_member_days, min_messages, activity_period
+            """;
+    private static final String FIND_SQL = "SELECT " + TAG_COLUMNS + """
             FROM tag
             WHERE id = ? AND guild_id = ?
+            """;
+    private static final String FIND_BY_GUILD_SQL = "SELECT " + TAG_COLUMNS + """
+            FROM tag
+            WHERE guild_id = ?
+            ORDER BY name_key
             """;
     private static final String FIND_ROLES_SQL = """
             SELECT role_id, kind FROM tag_role WHERE tag_id = ?
@@ -37,6 +46,9 @@ public class SqliteTagRepository implements TagRepository {
             UPDATE tag
             SET min_account_age_days = ?, min_member_days = ?, min_messages = ?, activity_period = ?
             WHERE id = ? AND guild_id = ?
+            """;
+    private static final String DELETE_SQL = """
+            DELETE FROM tag WHERE id = ? AND guild_id = ?
             """;
     private static final String DELETE_ROLES_SQL = """
             DELETE FROM tag_role WHERE tag_id = ?
@@ -76,27 +88,28 @@ public class SqliteTagRepository implements TagRepository {
                 statement.setLong(1, tagId);
                 statement.setLong(2, guildId);
                 try (ResultSet result = statement.executeQuery()) {
-                    if (!result.next()) {
-                        return Optional.empty();
-                    }
-                    String period = result.getString(6);
-                    Set<Long> required = new HashSet<>();
-                    Set<Long> forbidden = new HashSet<>();
-                    this.loadRoles(tagId, required, forbidden);
-                    return Optional.of(new Tag(
-                            tagId,
-                            guildId,
-                            result.getString(1),
-                            result.getString(2),
-                            getNullableInt(result, 3),
-                            getNullableInt(result, 4),
-                            getNullableInt(result, 5),
-                            period == null ? null : ActivityPeriod.valueOf(period),
-                            required,
-                            forbidden));
+                    return result.next() ? Optional.of(this.readTag(result, guildId)) : Optional.empty();
                 }
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to find tag", e);
+            }
+        }
+    }
+
+    @Override
+    public List<Tag> findByGuild(long guildId) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(FIND_BY_GUILD_SQL)) {
+                statement.setLong(1, guildId);
+                try (ResultSet result = statement.executeQuery()) {
+                    List<Tag> tags = new ArrayList<>();
+                    while (result.next()) {
+                        tags.add(this.readTag(result, guildId));
+                    }
+                    return tags;
+                }
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to list tags", e);
             }
         }
     }
@@ -137,6 +150,49 @@ public class SqliteTagRepository implements TagRepository {
         }
     }
 
+    @Override
+    public boolean delete(long guildId, long tagId) {
+        synchronized (this.connection) {
+            try {
+                this.connection.setAutoCommit(false);
+                try {
+                    boolean deleted = this.deleteTagRow(guildId, tagId);
+                    if (deleted) {
+                        this.deleteRoles(tagId);
+                    }
+                    this.connection.commit();
+                    return deleted;
+                } catch (SQLException e) {
+                    this.connection.rollback();
+                    throw e;
+                } finally {
+                    this.connection.setAutoCommit(true);
+                }
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to delete tag", e);
+            }
+        }
+    }
+
+    private Tag readTag(ResultSet result, long guildId) throws SQLException {
+        long tagId = result.getLong(1);
+        String period = result.getString(7);
+        Set<Long> required = new HashSet<>();
+        Set<Long> forbidden = new HashSet<>();
+        this.loadRoles(tagId, required, forbidden);
+        return new Tag(
+                tagId,
+                guildId,
+                result.getString(2),
+                result.getString(3),
+                getNullableInt(result, 4),
+                getNullableInt(result, 5),
+                getNullableInt(result, 6),
+                period == null ? null : ActivityPeriod.valueOf(period),
+                required,
+                forbidden);
+    }
+
     private void loadRoles(long tagId, Set<Long> required, Set<Long> forbidden) throws SQLException {
         try (PreparedStatement statement = this.connection.prepareStatement(FIND_ROLES_SQL)) {
             statement.setLong(1, tagId);
@@ -166,10 +222,7 @@ public class SqliteTagRepository implements TagRepository {
     }
 
     private void replaceRoles(Tag tag) throws SQLException {
-        try (PreparedStatement delete = this.connection.prepareStatement(DELETE_ROLES_SQL)) {
-            delete.setLong(1, tag.id());
-            delete.executeUpdate();
-        }
+        this.deleteRoles(tag.id());
         try (PreparedStatement insert = this.connection.prepareStatement(INSERT_ROLE_SQL)) {
             for (long roleId : tag.requiredRoleIds()) {
                 addRole(insert, tag.id(), roleId, REQUIRED_KIND);
@@ -178,6 +231,21 @@ public class SqliteTagRepository implements TagRepository {
                 addRole(insert, tag.id(), roleId, FORBIDDEN_KIND);
             }
             insert.executeBatch();
+        }
+    }
+
+    private boolean deleteTagRow(long guildId, long tagId) throws SQLException {
+        try (PreparedStatement statement = this.connection.prepareStatement(DELETE_SQL)) {
+            statement.setLong(1, tagId);
+            statement.setLong(2, guildId);
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    private void deleteRoles(long tagId) throws SQLException {
+        try (PreparedStatement statement = this.connection.prepareStatement(DELETE_ROLES_SQL)) {
+            statement.setLong(1, tagId);
+            statement.executeUpdate();
         }
     }
 

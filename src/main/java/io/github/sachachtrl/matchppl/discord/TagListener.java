@@ -41,7 +41,8 @@ import org.slf4j.LoggerFactory;
 public class TagListener extends ListenerAdapter {
     private static final Logger log = LoggerFactory.getLogger(TagListener.class);
 
-    private static final String COMMAND_NAME = "newtag";
+    private static final String NEWTAG_COMMAND = "newtag";
+    private static final String TAGS_COMMAND = "tags";
     private static final String NAME_OPTION = "name";
     private static final String EMOJI_OPTION = "emoji";
     private static final String MODAL_PREFIX = "tagmodal:";
@@ -62,24 +63,38 @@ public class TagListener extends ListenerAdapter {
         this.guildConfigService = guildConfigService;
     }
 
-    public static SlashCommandData command() {
+    public static SlashCommandData newTagCommand() {
         Locale locale = Messages.DEFAULT_LOCALE;
-        return Commands.slash(COMMAND_NAME, Messages.get(locale, "command.newtag.description"))
+        return Commands.slash(NEWTAG_COMMAND, Messages.get(locale, "command.newtag.description"))
                 .addOption(OptionType.STRING, NAME_OPTION, Messages.get(locale, "command.newtag.option.name"), true)
                 .addOption(OptionType.STRING, EMOJI_OPTION, Messages.get(locale, "command.newtag.option.emoji"), true)
                 .setContexts(InteractionContextType.GUILD);
     }
 
+    public static SlashCommandData tagsCommand() {
+        return Commands.slash(TAGS_COMMAND, Messages.get(Messages.DEFAULT_LOCALE, "command.tags.description"))
+                .setContexts(InteractionContextType.GUILD);
+    }
+
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+        String commandName = event.getName();
         Guild guild = event.getGuild();
         Member member = event.getMember();
-        if (!event.getName().equals(COMMAND_NAME) || guild == null || member == null) {
+        if ((!commandName.equals(NEWTAG_COMMAND) && !commandName.equals(TAGS_COMMAND))
+                || guild == null || member == null) {
             return;
         }
         Locale locale = Messages.DEFAULT_LOCALE;
         if (!this.isAdmin(member)) {
             this.replyError(event, Messages.get(locale, "error.title"), Messages.get(locale, "error.admin_required"));
+            return;
+        }
+        if (commandName.equals(TAGS_COMMAND)) {
+            event.replyComponents(TagViews.listCard(this.tagService.listTags(guild.getIdLong()), 0, locale))
+                    .useComponentsV2()
+                    .setEphemeral(true)
+                    .queue();
             return;
         }
         String name = event.getOption(NAME_OPTION, OptionMapping::getAsString);
@@ -112,12 +127,34 @@ public class TagListener extends ListenerAdapter {
             this.replyError(event, Messages.get(locale, "error.title"), Messages.get(locale, "error.admin_required"));
             return;
         }
-        Optional<Tag> tag = this.tagService.findTag(guild.getIdLong(), target.tagId());
+        long guildId = guild.getIdLong();
+        if (target.action().equals(TagViews.LIST)) {
+            int page = (int) target.tagId();
+            event.editComponents(TagViews.listCard(this.tagService.listTags(guildId), page, locale))
+                    .useComponentsV2()
+                    .queue();
+            return;
+        }
+        Optional<Tag> tag = this.tagService.findTag(guildId, target.tagId());
         if (tag.isEmpty()) {
             this.replyNotFound(event, locale);
             return;
         }
         switch (target.action()) {
+            case TagViews.MANAGE -> event.editComponents(TagViews.configCard(tag.get(), locale, false))
+                    .useComponentsV2()
+                    .queue();
+            case TagViews.DELETE -> event.editComponents(TagViews.confirmDeleteCard(tag.get(), locale))
+                    .useComponentsV2()
+                    .queue();
+            case TagViews.CONFIRM_DELETE -> {
+                if (!this.tagService.deleteTag(guildId, tag.get().id())) {
+                    this.replyNotFound(event, locale);
+                    return;
+                }
+                event.editComponents(TagViews.deletedCard(tag.get(), locale)).useComponentsV2().queue();
+                log.info("Tag deleted: guild={}, tag={}, by={}", guildId, tag.get().id(), member.getIdLong());
+            }
             case TagViews.AGE -> event.replyModal(this.daysModal(tag.get(), TagViews.AGE,
                     Messages.get(locale, "tag.age.title"), Messages.get(locale, "tag.modal.age.label"),
                     tag.get().minAccountAgeDays(), locale)).queue();
