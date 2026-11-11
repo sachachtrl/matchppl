@@ -3,8 +3,9 @@ package io.github.sachachtrl.matchppl.discord;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
 
 import java.util.Locale;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
@@ -94,11 +95,11 @@ public class AdminListener extends ListenerAdapter {
     }
 
     private void reply(SlashCommandInteractionEvent event, int color, String title, String description) {
-        event.replyEmbeds(new EmbedBuilder()
-                        .setTitle(title)
-                        .setDescription(description)
-                        .setColor(color)
-                        .build())
+        event.replyComponents(Container.of(
+                                TextDisplay.of("## " + title),
+                                TextDisplay.of(description))
+                        .withAccentColor(color))
+                .useComponentsV2()
                 .setEphemeral(true)
                 .queue();
     }

@@ -25,10 +25,11 @@ What the matching is *for* is up to each server — finding teammates, planning 
 
 ### Available
 
-- **`/match`** — enable or disable your match search through a private embed with a toggle button.
+- **`/match`** — enable or disable your match search through a private card with a toggle button.
 - **`/setadmin <role>`** / **`/removeadmin <role>`** — choose which roles may use the bot's admin commands (requires the *Manage Server* permission).
 - **Activity tracking** — daily message counts per member, used later for tag access conditions. The bot never reads message content.
 - **Translatable interface** — every user-facing text lives in resource bundles, with English as the default language.
+- **Modern message layout** — replies use Discord's Components V2: cards with sections, separators and inline buttons.
 
 ### Planned
 
@@ -54,7 +55,8 @@ What the matching is *for* is up to each server — finding teammates, planning 
 The code is split into layers, each one only talking to the layer below it:
 
 ```
-discord/      Layer 1 — JDA listeners: commands, buttons, message events, embeds.
+discord/      Layer 1 — JDA listeners: commands, buttons, message events, and the
+              Components V2 layouts sent back to Discord.
               Translates Discord events into plain values and never makes decisions.
 service/      Layer 2 — business rules. Does not depend on JDA, so it can be unit tested.
 repository/   Layer 3 — data access. The only place containing SQL.

@@ -3,11 +3,12 @@ package io.github.sachachtrl.matchppl.discord;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 
 import java.util.Locale;
-import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.section.Section;
+import net.dv8tion.jda.api.components.separator.Separator;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -45,8 +46,8 @@ public class MatchListener extends ListenerAdapter {
         }
         Locale locale = Messages.DEFAULT_LOCALE;
         boolean searching = this.profileService.isSearching(guild.getIdLong(), event.getUser().getIdLong());
-        event.replyEmbeds(this.buildEmbed(searching, locale))
-                .addComponents(this.buildActionRow(searching, locale))
+        event.replyComponents(this.buildView(searching, locale))
+                .useComponentsV2()
                 .setEphemeral(true)
                 .queue();
     }
@@ -63,25 +64,21 @@ public class MatchListener extends ListenerAdapter {
         long userId = event.getUser().getIdLong();
         boolean searching = buttonId.equals(ENABLE_BUTTON_ID);
         this.profileService.setSearching(guildId, userId, searching);
-        event.editMessageEmbeds(this.buildEmbed(searching, locale))
-                .setComponents(this.buildActionRow(searching, locale))
+        event.editComponents(this.buildView(searching, locale))
+                .useComponentsV2()
                 .queue();
         log.debug("Search state changed: guild={}, user={}, searching={}", guildId, userId, searching);
     }
 
-    private MessageEmbed buildEmbed(boolean searching, Locale locale) {
+    private Container buildView(boolean searching, Locale locale) {
         String statusKey = searching ? "match.status.enabled" : "match.status.disabled";
-        return new EmbedBuilder()
-                .setTitle(Messages.get(locale, "match.title"))
-                .setDescription(Messages.get(locale, statusKey))
-                .setColor(searching ? ENABLED_COLOR : DISABLED_COLOR)
-                .build();
-    }
-
-    private ActionRow buildActionRow(boolean searching, Locale locale) {
         Button button = searching
                 ? Button.danger(DISABLE_BUTTON_ID, Messages.get(locale, "match.button.disable"))
                 : Button.success(ENABLE_BUTTON_ID, Messages.get(locale, "match.button.enable"));
-        return ActionRow.of(button);
+        return Container.of(
+                TextDisplay.of("## " + Messages.get(locale, "match.title")),
+                Separator.createDivider(Separator.Spacing.SMALL),
+                Section.of(button, TextDisplay.of(Messages.get(locale, statusKey)))
+        ).withAccentColor(searching ? ENABLED_COLOR : DISABLED_COLOR);
     }
 }
