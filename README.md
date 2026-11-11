@@ -29,17 +29,18 @@ What the matching is *for* is up to each server — finding teammates, planning 
 - **`/setadmin <role>`** / **`/removeadmin <role>`** / **`/listadmin`** — choose which roles may use the bot's admin commands (requires the *Manage Server* permission). `/listadmin` shows them in a card where roles can be removed or added in bulk; every click re-reads the database, so the card always reflects the real state even when another command changed it.
 - **`/newtag <name> <emoji>`** — create an independent tag (a game, a city…) and configure its access conditions in place: minimum account age, time on the server, recent activity, required and forbidden roles. Every change is saved instantly.
 - **`/tags`** — browse the server's tags page by page, open any of them in the same configuration card, and delete them after confirmation.
+- **Matching** — every minute, the bot pairs searching members server-wide. The score is the number of shared tags divided by the larger tag count, so it is identical on both sides; every filter is checked in both directions, the best scores are served first, and ties go to whoever has been waiting the longest.
+- **Double-blind proposals** — sent privately to both members at once, with *Skip* and *Accept* buttons and a response deadline. Accepting can be cancelled, and nobody is ever told the other person's answer: a refusal is indistinguishable from no answer. If either member is anonymous, neither sees the other's name or avatar. A pair that ended without a match is never proposed again.
+- **`/reset <user>`** / **`/resetall`** — let admins lift those restrictions for one member or for the whole server, behind a clear confirmation card. The history itself is kept.
 - **Activity tracking** — daily message counts per member, used later for tag access conditions. The bot never reads message content.
 - **Translatable interface** — every user-facing text lives in resource bundles, with English as the default language.
 - **Modern message layout** — replies use Discord's Components V2: cards with sections, separators and inline buttons.
 
 ### Planned
 
-- **Matching** — the score is the number of shared tags divided by the larger tag count, so it is identical on both sides. The best available score is always proposed first.
-- **Double-blind proposals** — sent privately to both members at once, with *Skip* and *Accept* buttons and a response deadline. A refusal is indistinguishable from no answer.
 - **Temporary channels** — a private text and voice channel for each mutual match, deleted when its lifetime ends.
-- **Crash resilience** — every deadline is stored as an absolute UTC instant and processed by a periodic check, so nothing is lost if the bot goes down.
-- **`/language`** — change the bot's language for a whole server.
+- **Crash recovery** — deadlines are already stored as absolute UTC instants and processed by the periodic task; a heartbeat will also detect downtime on restart and cleanly interrupt the proposals that were in progress.
+- **`/config`** — server settings for admins: response delay, channel lifetime, matching frequency and language.
 
 ## Tech stack
 
@@ -60,6 +61,8 @@ discord/      Layer 1 — JDA listeners: commands, buttons, message events, and 
               Translates Discord events into plain values and never makes decisions.
 service/      Layer 2 — business rules. Does not depend on JDA, so it can be unit tested.
 repository/   Layer 3 — data access. The only place containing SQL.
+scheduler/    Layer 4 — the periodic task: closes expired proposals, then runs a
+              matchmaking round on every server through layer 2.
 ```
 
 Services depend on repository **interfaces**, and every dependency is injected through constructors. Storage can therefore change without touching the business rules: activity tracking moved from an in-memory map to SQLite without modifying a single line of its service or listener.
@@ -71,6 +74,7 @@ Services depend on repository **interfaces**, and every dependency is injected t
 - JDK 25
 - Maven 3.9+
 - A Discord application with a bot user, created on the [Discord Developer Portal](https://discord.com/developers/applications), invited to a server with the `bot` and `applications.commands` scopes
+- The **Server Members Intent** enabled in the portal (*Bot* → *Privileged Gateway Intents*); without it, the bot refuses to start
 
 ### Run
 
@@ -96,8 +100,8 @@ mvn test
 
 ## Privacy
 
-- The bot only requests the `GUILD_MESSAGES` intent, to count messages. It does **not** use the privileged *Message Content* intent and never reads what members write.
-- Profiles are **per server** and cannot be copied from one server to another.
+- The bot requests the `GUILD_MESSAGES` intent to count messages, and the privileged `GUILD_MEMBERS` intent to check roles, server seniority and avatars when matching, and to notice when a member leaves. It does **not** use the privileged *Message Content* intent and never reads what members write.
+- Profiles are **per server** and cannot be copied from one server to another. A member's profile is **deleted** as soon as they leave the server.
 - Member introductions are **encrypted at rest** with AES-256-GCM. The key lives outside the database, so a leaked database file alone reveals none of them.
 - Excluded tags are private: the other person is never told why they were not proposed.
 - The bot stores no images.
