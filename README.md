@@ -105,7 +105,7 @@ mvn test
 
 ## Privacy
 
-- The bot requests the `GUILD_MESSAGES` intent to count messages, and the privileged `GUILD_MEMBERS` intent to check roles, server seniority and avatars when matching, and to notice when a member leaves. It does **not** use the privileged *Message Content* intent and never reads what members write.
+- The bot requests the `GUILD_MESSAGES` intent to count messages, and the privileged `GUILD_MEMBERS` intent to check roles, server seniority and avatars when matching, and to notice when a member leaves. It also receives the server's emoji list (`GUILD_EXPRESSIONS`, not privileged) to know whether the custom emoji of a tag still exists. It does **not** use the privileged *Message Content* intent and never reads what members write.
 - Profiles are **per server** and cannot be copied from one server to another. Members can **delete their profile and message counts at any time** from `/match`, and both are deleted automatically as soon as they leave the server.
 - When the bot is kicked or banned from a server, **everything it stored about that server is deleted**: profiles, tags, settings, activity, proposals and channel records.
 - Member introductions are **encrypted at rest** with AES-256-GCM. The key lives outside the database, so a leaked database file alone reveals none of them.

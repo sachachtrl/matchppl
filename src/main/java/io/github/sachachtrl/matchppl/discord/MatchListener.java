@@ -10,6 +10,7 @@ import io.github.sachachtrl.matchppl.service.TagService;
 
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.LongPredicate;
 import java.util.stream.Collectors;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.label.Label;
@@ -261,7 +262,7 @@ public class MatchListener extends ListenerAdapter {
         long guildId = member.getGuild().getIdLong();
         Profile profile = this.profileService.getProfile(guildId, member.getIdLong());
         return ProfileViews.mainCard(profile, this.tagService.usableTags(MemberSnapshots.of(member)),
-                this.tagService.listTags(guildId), pages, locale);
+                this.tagService.listTags(guildId), customEmojiExists(member), pages, locale);
     }
 
     private Container advancedView(Member member, Locale locale) {
@@ -271,7 +272,12 @@ public class MatchListener extends ListenerAdapter {
     private Container advancedView(Member member, ProfileViews.TagPages pages, Locale locale) {
         long guildId = member.getGuild().getIdLong();
         Profile profile = this.profileService.getProfile(guildId, member.getIdLong());
-        return ProfileViews.advancedCard(profile, this.tagService.listTags(guildId), pages, locale);
+        return ProfileViews.advancedCard(profile, this.tagService.listTags(guildId), customEmojiExists(member),
+                pages, locale);
+    }
+
+    private static LongPredicate customEmojiExists(Member member) {
+        return emojiId -> member.getGuild().getEmojiById(emojiId) != null;
     }
 
     private Modal presentationModal(long guildId, long userId, Locale locale) {

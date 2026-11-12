@@ -27,8 +27,15 @@ class TagEmojisTest {
 
     @Test
     void anInvalidStoredEmojiIsLeftOutOfMenus() {
-        assertNull(TagEmojis.forMenu("!"));
-        assertNotNull(TagEmojis.forMenu("🎮"));
-        assertNotNull(TagEmojis.forMenu("<:pepe:123456789012345678>"));
+        assertNull(TagEmojis.forMenu("!", emojiId -> true));
+        assertNotNull(TagEmojis.forMenu("🎮", emojiId -> true));
+        assertNotNull(TagEmojis.forMenu("<:pepe:123456789012345678>", emojiId -> true));
+    }
+
+    @Test
+    void aDeletedCustomEmojiIsLeftOutOfMenus() {
+        assertNull(TagEmojis.forMenu("<:pepe:123456789012345678>", emojiId -> false));
+        assertNotNull(TagEmojis.forMenu("<:pepe:123456789012345678>", emojiId -> emojiId == 123456789012345678L));
+        assertNotNull(TagEmojis.forMenu("🎮", emojiId -> false));
     }
 }

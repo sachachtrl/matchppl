@@ -37,7 +37,7 @@ class ComponentLimitTest {
                 .mapToObj(id -> new Tag(id, 1L, "Tag " + id, "🎮", MemberConditions.NONE, Set.of(), Set.of()))
                 .toList();
         Profile profile = Profile.empty(1L, 10L).withDmUnreachable(true);
-        Container card = ProfileViews.mainCard(profile, tags, tags, new ProfileViews.TagPages(1, 1),
+        Container card = ProfileViews.mainCard(profile, tags, tags, emojiId -> true, new ProfileViews.TagPages(1, 1),
                 Messages.DEFAULT_LOCALE);
 
         long count = count(card);

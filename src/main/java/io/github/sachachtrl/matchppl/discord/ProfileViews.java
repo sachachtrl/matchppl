@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.LongPredicate;
 import java.util.stream.IntStream;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
@@ -68,8 +69,8 @@ final class ProfileViews {
     private ProfileViews() {
     }
 
-    static Container mainCard(Profile profile, List<Tag> usableTags, List<Tag> allTags, TagPages pages,
-            Locale locale) {
+    static Container mainCard(Profile profile, List<Tag> usableTags, List<Tag> allTags,
+            LongPredicate customEmojiExists, TagPages pages, Locale locale) {
         List<ContainerChildComponent> children = new ArrayList<>();
         children.add(TextDisplay.of("## " + Messages.get(locale, "profile.title") + "\n-# "
                 + Messages.get(locale, "profile.subtitle")));
@@ -85,13 +86,13 @@ final class ProfileViews {
         children.add(TextDisplay.of("**" + Messages.get(locale, "profile.tags.title") + "**\n-# "
                 + Messages.get(locale, usableTags.isEmpty() ? "profile.tags.none" : "profile.tags.hint")));
         if (!usableTags.isEmpty()) {
-            addTagMenu(children, TAGS, 0, usableTags, profile.tagIds(), pages,
+            addTagMenu(children, TAGS, 0, usableTags, profile.tagIds(), customEmojiExists, pages,
                     Messages.get(locale, "profile.tags.placeholder"), locale);
         }
         if (!allTags.isEmpty()) {
             children.add(TextDisplay.of("**" + Messages.get(locale, "profile.excluded.title") + "**\n-# "
                     + Messages.get(locale, "profile.excluded.hint")));
-            addTagMenu(children, EXCLUDED, 1, allTags, profile.excludedTagIds(), pages,
+            addTagMenu(children, EXCLUDED, 1, allTags, profile.excludedTagIds(), customEmojiExists, pages,
                     Messages.get(locale, "profile.excluded.placeholder"), locale);
         }
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
@@ -106,7 +107,8 @@ final class ProfileViews {
                 .withAccentColor(profile.searching() ? Cards.SUCCESS_COLOR : Cards.ERROR_COLOR);
     }
 
-    static Container advancedCard(Profile profile, List<Tag> allTags, TagPages pages, Locale locale) {
+    static Container advancedCard(Profile profile, List<Tag> allTags, LongPredicate customEmojiExists,
+            TagPages pages, Locale locale) {
         PartnerPreferences preferences = profile.preferences();
         List<ContainerChildComponent> children = new ArrayList<>();
         children.add(TextDisplay.of("## " + Messages.get(locale, "advanced.title") + "\n-# "
@@ -115,7 +117,7 @@ final class ProfileViews {
             children.add(Separator.createDivider(Separator.Spacing.SMALL));
             children.add(TextDisplay.of("**" + Messages.get(locale, "advanced.required.title") + "**\n-# "
                     + Messages.get(locale, "advanced.required.hint")));
-            addTagMenu(children, REQUIRED, 0, allTags, preferences.requiredTagIds(), pages,
+            addTagMenu(children, REQUIRED, 0, allTags, preferences.requiredTagIds(), customEmojiExists, pages,
                     Messages.get(locale, "advanced.required.placeholder"), locale);
         }
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
@@ -244,12 +246,13 @@ final class ProfileViews {
     }
 
     private static void addTagMenu(List<ContainerChildComponent> children, String menu, int index, List<Tag> tags,
-            Set<Long> selected, TagPages pages, String placeholder, Locale locale) {
+            Set<Long> selected, LongPredicate customEmojiExists, TagPages pages, String placeholder, Locale locale) {
         int count = pageCount(tags);
         int current = clampPage(tags, pages.get(index));
         TagPages shown = pages.with(index, current);
         String text = count > 1 ? placeholder + " (" + (current + 1) + "/" + count + ")" : placeholder;
-        children.add(ActionRow.of(tagSelect(menu + shown.suffix(), page(tags, current), selected, text)));
+        children.add(ActionRow.of(tagSelect(menu + shown.suffix(), page(tags, current), selected, customEmojiExists,
+                text)));
         if (count > 1) {
             String pager = PAGE + menu.substring(PREFIX.length()) + ":";
             children.add(ActionRow.of(
@@ -260,10 +263,11 @@ final class ProfileViews {
         }
     }
 
-    private static StringSelectMenu tagSelect(String id, List<Tag> shown, Set<Long> selected, String placeholder) {
+    private static StringSelectMenu tagSelect(String id, List<Tag> shown, Set<Long> selected,
+            LongPredicate customEmojiExists, String placeholder) {
         List<SelectOption> options = shown.stream()
                 .map(tag -> SelectOption.of(tag.name(), String.valueOf(tag.id()))
-                        .withEmoji(TagEmojis.forMenu(tag.emoji()))
+                        .withEmoji(TagEmojis.forMenu(tag.emoji(), customEmojiExists))
                         .withDefault(selected.contains(tag.id())))
                 .toList();
         return StringSelectMenu.create(id)

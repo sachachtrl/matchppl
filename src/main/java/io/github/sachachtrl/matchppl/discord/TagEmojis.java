@@ -1,7 +1,9 @@
 package io.github.sachachtrl.matchppl.discord;
 
 import java.text.BreakIterator;
+import java.util.function.LongPredicate;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
+import net.dv8tion.jda.api.entities.emoji.EmojiUnion;
 
 final class TagEmojis {
     private static final int MAX_LENGTH = 64;
@@ -24,10 +26,13 @@ final class TagEmojis {
         return allowed && visible;
     }
 
-    static Emoji forMenu(String stored) {
+    static Emoji forMenu(String stored, LongPredicate customEmojiExists) {
         if (stored.startsWith("<")) {
             try {
-                return Emoji.fromFormatted(stored);
+                EmojiUnion emoji = Emoji.fromFormatted(stored);
+                return emoji.getType() == Emoji.Type.CUSTOM && customEmojiExists.test(emoji.asCustom().getIdLong())
+                        ? emoji
+                        : null;
             } catch (IllegalArgumentException e) {
                 return null;
             }

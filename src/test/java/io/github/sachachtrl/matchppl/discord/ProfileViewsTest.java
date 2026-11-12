@@ -42,9 +42,9 @@ class ProfileViewsTest {
         List<Tag> tags = tags(60);
         Profile profile = Profile.empty(1L, 10L);
 
-        assertDoesNotThrow(() -> ProfileViews.mainCard(profile, tags, tags, new ProfileViews.TagPages(2, 1),
-                Messages.DEFAULT_LOCALE));
-        assertDoesNotThrow(() -> ProfileViews.advancedCard(profile, tags, new ProfileViews.TagPages(1, 0),
-                Messages.DEFAULT_LOCALE));
+        assertDoesNotThrow(() -> ProfileViews.mainCard(profile, tags, tags, emojiId -> true,
+                new ProfileViews.TagPages(2, 1), Messages.DEFAULT_LOCALE));
+        assertDoesNotThrow(() -> ProfileViews.advancedCard(profile, tags, emojiId -> true,
+                new ProfileViews.TagPages(1, 0), Messages.DEFAULT_LOCALE));
     }
 }
