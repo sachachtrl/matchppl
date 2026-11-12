@@ -113,6 +113,10 @@ java -jar target/matchppl.jar
 
 The bot reads `.env` and stores `matchppl.db` in its working directory. On a Linux server, [`deploy/matchppl.service`](deploy/matchppl.service) runs it as a systemd service under a dedicated, unprivileged user, restarts it after a crash or a reboot, and sandboxes it so that it can only write to its own directory (`/opt/matchppl`). Only one instance may run with a given token at a time.
 
+### Backups
+
+Every night, [`deploy/matchppl-backup.sh`](deploy/matchppl-backup.sh), triggered by a systemd timer, takes a consistent snapshot of the database with SQLite's backup command, checks its integrity, encrypts it with [age](https://age-encryption.org/) and keeps the last 14 days on the server. The server only holds the public key: it can encrypt backups but never read them. [`deploy/pull-backups.ps1`](deploy/pull-backups.ps1) then copies them off the server over SSH, for example from the Windows Task Scheduler. Restoring a backup requires both the private age key and the `PROFILE_KEY`.
+
 ## Privacy
 
 - The bot requests the `GUILD_MESSAGES` intent to count messages, and the privileged `GUILD_MEMBERS` intent to check roles, server seniority and avatars when matching, and to notice when a member leaves. It also receives the server's emoji list (`GUILD_EXPRESSIONS`, not privileged) to know whether the custom emoji of a tag still exists. It does **not** use the privileged *Message Content* intent and never reads what members write.
@@ -122,6 +126,7 @@ The bot reads `.env` and stores `matchppl.db` in its working directory. On a Lin
 - Excluded tags and blocks are private: the other person is never told why they were not proposed.
 - Reports are only sent to the server's admins and are not stored by the bot.
 - Message activity is reduced to numbers: daily counts are kept for 30 days only, next to a single all-time total per member.
+- Database backups are encrypted on the server before they leave it, with a key the server cannot use to decrypt them.
 - The bot stores no images.
 
 ## License

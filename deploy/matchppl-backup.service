@@ -1,0 +1,26 @@
+[Unit]
+Description=Encrypted backup of the Match People database
+
+[Service]
+Type=oneshot
+User=matchppl
+Group=matchppl
+ExecStart=/usr/local/bin/matchppl-backup
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+PrivateNetwork=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/backups/matchppl
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
