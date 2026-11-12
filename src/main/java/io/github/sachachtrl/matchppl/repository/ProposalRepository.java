@@ -27,6 +27,8 @@ public interface ProposalRepository {
 
     void unblockInvolving(long guildId, long userId);
 
+    boolean unblockPair(long guildId, long firstUserId, long secondUserId);
+
     List<Proposal> findExpired(Instant now);
 
     List<Proposal> findOpen();

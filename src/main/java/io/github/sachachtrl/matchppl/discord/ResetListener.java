@@ -29,10 +29,13 @@ public class ResetListener extends ListenerAdapter {
 
     private static final String RESET_COMMAND = "reset";
     private static final String RESET_ALL_COMMAND = "resetall";
+    private static final String RESET_PAIR_COMMAND = "resetpair";
     private static final String USER_OPTION = "user";
+    private static final String OTHER_OPTION = "other";
     private static final String PREFIX = "reset:";
     private static final String CONFIRM_USER_PREFIX = PREFIX + "user:";
     private static final String CONFIRM_ALL = PREFIX + "all";
+    private static final String CONFIRM_PAIR_PREFIX = PREFIX + "pair:";
     private static final String CANCEL = PREFIX + "cancel";
 
     private final ProposalService proposalService;
@@ -55,13 +58,21 @@ public class ResetListener extends ListenerAdapter {
                 .setContexts(InteractionContextType.GUILD);
     }
 
+    public static SlashCommandData resetPairCommand() {
+        Locale locale = Messages.DEFAULT_LOCALE;
+        return Commands.slash(RESET_PAIR_COMMAND, Messages.get(locale, "command.resetpair.description"))
+                .addOption(OptionType.USER, USER_OPTION, Messages.get(locale, "command.resetpair.option.user"), true)
+                .addOption(OptionType.USER, OTHER_OPTION, Messages.get(locale, "command.resetpair.option.other"), true)
+                .setContexts(InteractionContextType.GUILD);
+    }
+
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
         String commandName = event.getName();
         Guild guild = event.getGuild();
         Member member = event.getMember();
-        if ((!commandName.equals(RESET_COMMAND) && !commandName.equals(RESET_ALL_COMMAND))
-                || guild == null || member == null) {
+        if ((!commandName.equals(RESET_COMMAND) && !commandName.equals(RESET_ALL_COMMAND)
+                && !commandName.equals(RESET_PAIR_COMMAND)) || guild == null || member == null) {
             return;
         }
         Locale locale = this.guildConfigService.language(guild.getIdLong());
@@ -75,6 +86,13 @@ public class ResetListener extends ListenerAdapter {
                 return;
             }
             card = this.confirmUserCard(guild.getIdLong(), target, locale);
+        } else if (commandName.equals(RESET_PAIR_COMMAND)) {
+            User first = event.getOption(USER_OPTION, OptionMapping::getAsUser);
+            User second = event.getOption(OTHER_OPTION, OptionMapping::getAsUser);
+            if (first == null || second == null) {
+                return;
+            }
+            card = this.confirmPairCard(guild.getIdLong(), first, second, locale);
         } else {
             card = this.confirmAllCard(guild.getIdLong(), locale);
         }
@@ -115,10 +133,44 @@ public class ResetListener extends ListenerAdapter {
                     count == 1
                             ? Messages.format(locale, "reset.done.user.one", mention)
                             : Messages.format(locale, "reset.done.user.other", count, mention));
+        } else if (id.startsWith(CONFIRM_PAIR_PREFIX)) {
+            String[] users = id.substring(CONFIRM_PAIR_PREFIX.length()).split(":");
+            long firstId = Long.parseLong(users[0]);
+            long secondId = Long.parseLong(users[1]);
+            String first = "<@" + firstId + ">";
+            String second = "<@" + secondId + ">";
+            if (this.proposalService.resetPair(guildId, firstId, secondId)) {
+                log.info("Match history reset: guild={}, pair={}:{}, by={}",
+                        guildId, firstId, secondId, member.getIdLong());
+                card = Cards.simple(Cards.SUCCESS_COLOR, Messages.get(locale, "reset.done.title"),
+                        Messages.format(locale, "reset.done.pair", first, second));
+            } else {
+                card = Cards.simple(Cards.NEUTRAL_COLOR, Messages.get(locale, "reset.nothing.title"),
+                        Messages.format(locale, "reset.pair.nothing", first, second));
+            }
         } else {
             return;
         }
         event.editComponents(card).useComponentsV2().queue();
+    }
+
+    private Container confirmPairCard(long guildId, User first, User second, Locale locale) {
+        boolean same = first.getIdLong() == second.getIdLong();
+        if (same || first.isBot() || second.isBot()) {
+            return Cards.simple(Cards.ERROR_COLOR, Messages.get(locale, "error.invalid_title"),
+                    Messages.get(locale, same ? "reset.pair.same" : "reset.pair.bot"));
+        }
+        if (!this.proposalService.isBlocked(guildId, first.getIdLong(), second.getIdLong())) {
+            return Cards.simple(Cards.NEUTRAL_COLOR, Messages.get(locale, "reset.nothing.title"),
+                    Messages.format(locale, "reset.pair.nothing", first.getAsMention(), second.getAsMention()));
+        }
+        return confirmationCard(Cards.WARNING_COLOR,
+                Messages.format(locale, "reset.pair.title", first.getEffectiveName(), second.getEffectiveName()),
+                Messages.format(locale, "reset.pair.explanation", first.getAsMention(), second.getAsMention()),
+                Messages.get(locale, "reset.user.count.one"),
+                Button.danger(CONFIRM_PAIR_PREFIX + first.getIdLong() + ":" + second.getIdLong(),
+                        Messages.get(locale, "reset.pair.confirm")),
+                locale);
     }
 
     private Container confirmUserCard(long guildId, User target, Locale locale) {

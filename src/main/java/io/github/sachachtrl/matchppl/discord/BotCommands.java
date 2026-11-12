@@ -22,6 +22,7 @@ public final class BotCommands {
                         TagListener.tagsCommand(),
                         ResetListener.resetCommand(),
                         ResetListener.resetAllCommand(),
+                        ResetListener.resetPairCommand(),
                         ConfigListener.command())
                 .stream()
                 .map(BotCommands::localize)

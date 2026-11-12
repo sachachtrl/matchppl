@@ -238,6 +238,26 @@ class ProposalServiceTest {
     }
 
     @Test
+    void resettingAPairUnblocksOnlyThatPairInEitherOrder() {
+        Proposal withBob = this.propose(ALICE, BOB);
+        this.service.answer(withBob.id(), ALICE, ProposalService.Action.SKIP);
+        Proposal withCarol = this.propose(ALICE, CAROL);
+        this.service.answer(withCarol.id(), ALICE, ProposalService.Action.SKIP);
+        assertTrue(this.service.isBlocked(GUILD, BOB, ALICE));
+
+        assertTrue(this.service.resetPair(GUILD, BOB, ALICE));
+
+        assertFalse(this.service.isBlocked(GUILD, ALICE, BOB));
+        assertEquals(Set.of(new UserPair(ALICE, CAROL)), this.service.blockedPairs(GUILD));
+    }
+
+    @Test
+    void resettingAPairThatIsNotBlockedChangesNothing() {
+        assertFalse(this.service.resetPair(GUILD, ALICE, BOB));
+        assertFalse(this.service.resetPair(GUILD, ALICE, ALICE));
+    }
+
+    @Test
     void aSkipGivenBeforeAnInterruptionStillBlocksThePair() {
         Proposal proposal = this.propose(ALICE, BOB);
         this.service.answer(proposal.id(), ALICE, ProposalService.Action.SKIP);

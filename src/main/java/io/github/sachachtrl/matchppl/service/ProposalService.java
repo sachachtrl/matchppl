@@ -152,6 +152,14 @@ public class ProposalService {
         return count;
     }
 
+    public boolean isBlocked(long guildId, long firstUserId, long secondUserId) {
+        return this.proposalRepo.findBlockedPairs(guildId).contains(new UserPair(firstUserId, secondUserId));
+    }
+
+    public synchronized boolean resetPair(long guildId, long firstUserId, long secondUserId) {
+        return firstUserId != secondUserId && this.proposalRepo.unblockPair(guildId, firstUserId, secondUserId);
+    }
+
     public void recordMessage(long proposalId, long userId, long messageId) {
         this.proposalRepo.setMessageId(proposalId, userId, messageId);
     }

@@ -69,6 +69,9 @@ public class SqliteProposalRepository implements ProposalRepository {
     private static final String UNBLOCK_INVOLVING_SQL = UNBLOCK_SQL + """
             AND (first_user_id = ? OR second_user_id = ?)
             """;
+    private static final String UNBLOCK_PAIR_SQL = UNBLOCK_SQL + """
+            AND ((first_user_id = ? AND second_user_id = ?) OR (first_user_id = ? AND second_user_id = ?))
+            """;
     private static final String UPDATE_FIRST_ANSWER_SQL = """
             UPDATE proposal SET first_answer = ?
             WHERE id = ? AND status = 'OPEN' AND first_user_id = ? AND first_answer = ?
@@ -189,6 +192,22 @@ public class SqliteProposalRepository implements ProposalRepository {
     @Override
     public void unblockInvolving(long guildId, long userId) {
         this.executeUnblock(UNBLOCK_INVOLVING_SQL, guildId, userId);
+    }
+
+    @Override
+    public boolean unblockPair(long guildId, long firstUserId, long secondUserId) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(UNBLOCK_PAIR_SQL)) {
+                statement.setLong(1, guildId);
+                statement.setLong(2, firstUserId);
+                statement.setLong(3, secondUserId);
+                statement.setLong(4, secondUserId);
+                statement.setLong(5, firstUserId);
+                return statement.executeUpdate() > 0;
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to unblock pair", e);
+            }
+        }
     }
 
     @Override
