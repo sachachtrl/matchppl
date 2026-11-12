@@ -1,8 +1,10 @@
 package io.github.sachachtrl.matchppl.discord;
 
 import io.github.sachachtrl.matchppl.model.Proposal;
+import io.github.sachachtrl.matchppl.model.Room;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 import io.github.sachachtrl.matchppl.service.ProposalService;
+import io.github.sachachtrl.matchppl.service.RoomService;
 
 import java.util.List;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
@@ -15,13 +17,17 @@ public class MemberListener extends ListenerAdapter {
 
     private final ProfileService profileService;
     private final ProposalService proposalService;
+    private final RoomService roomService;
     private final ProposalMessenger messenger;
+    private final RoomManager roomManager;
 
-    public MemberListener(ProfileService profileService, ProposalService proposalService,
-            ProposalMessenger messenger) {
+    public MemberListener(ProfileService profileService, ProposalService proposalService, RoomService roomService,
+            ProposalMessenger messenger, RoomManager roomManager) {
         this.profileService = profileService;
         this.proposalService = proposalService;
+        this.roomService = roomService;
         this.messenger = messenger;
+        this.roomManager = roomManager;
     }
 
     @Override
@@ -29,11 +35,15 @@ public class MemberListener extends ListenerAdapter {
         long guildId = event.getGuild().getIdLong();
         long userId = event.getUser().getIdLong();
         List<Proposal> interrupted = this.proposalService.interruptAllFor(guildId, userId);
+        List<Room> closed = this.roomService.closeAllFor(guildId, userId);
         this.profileService.deleteProfile(guildId, userId);
         for (Proposal proposal : interrupted) {
             this.messenger.showUnavailable(event.getJDA(), proposal);
         }
-        log.info("Member left, profile deleted: guild={}, user={}, interruptedProposals={}",
-                guildId, userId, interrupted.size());
+        for (Room room : closed) {
+            this.roomManager.remove(event.getJDA(), room);
+        }
+        log.info("Member left, profile deleted: guild={}, user={}, interruptedProposals={}, closedRooms={}",
+                guildId, userId, interrupted.size(), closed.size());
     }
 }

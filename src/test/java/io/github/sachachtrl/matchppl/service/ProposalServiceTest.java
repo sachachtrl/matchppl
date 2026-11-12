@@ -9,8 +9,10 @@ import io.github.sachachtrl.matchppl.model.Tag;
 import io.github.sachachtrl.matchppl.model.UserPair;
 import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.InMemoryActivityRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProposalRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteRoomRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteTagRepository;
 import io.github.sachachtrl.matchppl.repository.TextCipher;
 
@@ -51,6 +53,8 @@ class ProposalServiceTest {
         this.profileService = new ProfileService(
                 new SqliteProfileRepository(this.database, new TextCipher(new byte[32])), tagService, this.clock);
         this.service = new ProposalService(new SqliteProposalRepository(this.database), this.profileService,
+                new RoomService(new SqliteRoomRepository(this.database), this.profileService,
+                        new GuildConfigService(new SqliteGuildConfigRepository(this.database)), this.clock),
                 this.clock);
         Tag tag = ((TagService.Created) tagService.createTag(GUILD, "Fortnite", "🎮")).tag();
         for (long user : List.of(ALICE, BOB, CAROL)) {
@@ -123,6 +127,30 @@ class ProposalServiceTest {
 
         assertInstanceOf(ProposalService.Matched.class, result);
         assertEquals(ProposalStatus.MATCHED, this.reload(proposal).status());
+    }
+
+    @Test
+    void aMatchOpensARoomThatKeepsBothMembersBusy() {
+        Proposal proposal = this.propose(ALICE, BOB);
+        this.service.answer(proposal.id(), ALICE, ProposalService.Action.ACCEPT);
+
+        ProposalService.AnswerResult result = this.service.answer(proposal.id(), BOB, ProposalService.Action.ACCEPT);
+
+        assertTrue(((ProposalService.Matched) result).room().isPresent());
+        assertEquals(Set.of(ALICE, BOB), this.service.busyUsers(GUILD));
+        assertTrue(this.service.createProposals(GUILD, List.of(new MatchPair(ALICE, CAROL, 1, 1)), DELAY).isEmpty());
+    }
+
+    @Test
+    void aMatchWithoutRoomFreesBothMembers() {
+        this.profileService.setAllowRooms(GUILD, ALICE, false);
+        Proposal proposal = this.propose(ALICE, BOB);
+        this.service.answer(proposal.id(), ALICE, ProposalService.Action.ACCEPT);
+
+        ProposalService.AnswerResult result = this.service.answer(proposal.id(), BOB, ProposalService.Action.ACCEPT);
+
+        assertTrue(((ProposalService.Matched) result).room().isEmpty());
+        assertTrue(this.service.busyUsers(GUILD).isEmpty());
     }
 
     @Test

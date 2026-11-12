@@ -105,6 +105,12 @@ public class ProfileService {
         return updated;
     }
 
+    public Profile setAllowRooms(long guildId, long userId, boolean allow) {
+        Profile updated = this.profileRepo.find(guildId, userId).withAllowRooms(allow);
+        this.profileRepo.save(updated);
+        return updated;
+    }
+
     public Profile setExcludeAnonymous(long guildId, long userId, boolean exclude) {
         return this.updatePreferences(guildId, userId, preferences -> preferences.withExcludeAnonymous(exclude));
     }

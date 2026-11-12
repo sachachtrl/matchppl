@@ -2,9 +2,12 @@ package io.github.sachachtrl.matchppl.scheduler;
 
 import io.github.sachachtrl.matchppl.discord.MemberSnapshots;
 import io.github.sachachtrl.matchppl.discord.ProposalMessenger;
+import io.github.sachachtrl.matchppl.discord.RoomManager;
 import io.github.sachachtrl.matchppl.model.Proposal;
+import io.github.sachachtrl.matchppl.model.Room;
 import io.github.sachachtrl.matchppl.service.MatchmakingService;
 import io.github.sachachtrl.matchppl.service.ProposalService;
+import io.github.sachachtrl.matchppl.service.RoomService;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,14 +22,18 @@ public class MatchmakingTask implements Runnable {
     private final JDA jda;
     private final ProposalService proposalService;
     private final MatchmakingService matchmakingService;
+    private final RoomService roomService;
     private final ProposalMessenger messenger;
+    private final RoomManager roomManager;
 
     public MatchmakingTask(JDA jda, ProposalService proposalService, MatchmakingService matchmakingService,
-            ProposalMessenger messenger) {
+            RoomService roomService, ProposalMessenger messenger, RoomManager roomManager) {
         this.jda = jda;
         this.proposalService = proposalService;
         this.matchmakingService = matchmakingService;
+        this.roomService = roomService;
         this.messenger = messenger;
+        this.roomManager = roomManager;
     }
 
     @Override
@@ -37,6 +44,16 @@ public class MatchmakingTask implements Runnable {
             }
         } catch (RuntimeException e) {
             log.error("Failed to close expired proposals", e);
+        }
+        try {
+            for (Room room : this.roomService.closeDue()) {
+                this.roomManager.remove(this.jda, room);
+            }
+            for (Room room : this.roomService.remindersDue()) {
+                this.roomManager.remind(this.jda, room);
+            }
+        } catch (RuntimeException e) {
+            log.error("Failed to process rooms", e);
         }
         for (Guild guild : this.jda.getGuilds()) {
             try {

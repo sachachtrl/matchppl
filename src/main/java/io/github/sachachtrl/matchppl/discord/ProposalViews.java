@@ -31,6 +31,8 @@ final class ProposalViews {
 
     record OtherMember(String name, String avatarUrl, String presentation) {}
 
+    record MatchInfo(String text, boolean reportable) {}
+
     private ProposalViews() {
     }
 
@@ -39,7 +41,7 @@ final class ProposalViews {
     }
 
     static Container card(long proposalId, CardState state, String guildName, OtherMember other,
-            List<String> commonTags, Instant deadline, Locale locale) {
+            List<String> commonTags, Instant deadline, MatchInfo match, Locale locale) {
         List<ContainerChildComponent> children = new ArrayList<>();
         children.add(TextDisplay.of("## " + Messages.get(locale, "proposal.title") + "\n-# "
                 + Messages.format(locale, "proposal.from", guildName)));
@@ -52,21 +54,25 @@ final class ProposalViews {
             String tags = commonTags.isEmpty()
                     ? Messages.get(locale, "proposal.no_common_tag")
                     : Messages.format(locale, "proposal.common_tags", String.join(" · ", commonTags));
-            String details = "-# " + tags;
+            children.add(TextDisplay.of("-# " + tags));
             if (state != CardState.MATCHED) {
-                details += "\n-# " + Messages.format(locale, "proposal.deadline",
-                        "<t:" + deadline.getEpochSecond() + ":R>");
+                children.add(TextDisplay.of("-# " + Messages.format(locale, "proposal.deadline",
+                        "<t:" + deadline.getEpochSecond() + ":R>")));
             }
-            children.add(TextDisplay.of(details));
         }
         String stateKey = stateKey(state);
-        if (stateKey != null) {
+        String stateText = state == CardState.MATCHED && match != null ? match.text()
+                : stateKey == null ? null : Messages.get(locale, stateKey);
+        if (stateText != null) {
             if (showsProfile) {
                 children.add(Separator.createDivider(Separator.Spacing.SMALL));
             }
-            children.add(TextDisplay.of(Messages.get(locale, stateKey)));
+            children.add(TextDisplay.of(stateText));
         }
-        ActionRow buttons = buttons(proposalId, state, locale);
+        ActionRow buttons = state == CardState.MATCHED && match != null && match.reportable()
+                ? ActionRow.of(Button.secondary(RoomViews.reportId(RoomViews.REPORT_PROPOSAL, proposalId),
+                        Messages.get(locale, "report.button")))
+                : buttons(proposalId, state, locale);
         if (buttons != null) {
             children.add(Separator.createDivider(Separator.Spacing.LARGE));
             children.add(buttons);
@@ -88,7 +94,7 @@ final class ProposalViews {
             case ACCEPTED -> "proposal.state.accepted";
             case SKIPPED -> "proposal.state.skipped";
             case CANCELLED -> "proposal.state.cancelled";
-            case MATCHED -> "proposal.state.matched";
+            case MATCHED -> null;
             case ENDED -> "proposal.state.ended";
             case UNAVAILABLE -> "proposal.state.unavailable";
         };

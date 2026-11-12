@@ -8,17 +8,22 @@ import io.github.sachachtrl.matchppl.discord.MatchListener;
 import io.github.sachachtrl.matchppl.discord.MemberListener;
 import io.github.sachachtrl.matchppl.discord.ProposalListener;
 import io.github.sachachtrl.matchppl.discord.ProposalMessenger;
+import io.github.sachachtrl.matchppl.discord.ReportListener;
 import io.github.sachachtrl.matchppl.discord.ResetListener;
+import io.github.sachachtrl.matchppl.discord.RoomListener;
+import io.github.sachachtrl.matchppl.discord.RoomManager;
 import io.github.sachachtrl.matchppl.discord.TagListener;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.GuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.ProfileRepository;
 import io.github.sachachtrl.matchppl.repository.ProposalRepository;
+import io.github.sachachtrl.matchppl.repository.RoomRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteActivityRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProposalRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteRoomRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteTagRepository;
 import io.github.sachachtrl.matchppl.repository.TagRepository;
 import io.github.sachachtrl.matchppl.repository.TextCipher;
@@ -30,6 +35,7 @@ import io.github.sachachtrl.matchppl.service.MatchingService;
 import io.github.sachachtrl.matchppl.service.MatchmakingService;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 import io.github.sachachtrl.matchppl.service.ProposalService;
+import io.github.sachachtrl.matchppl.service.RoomService;
 import io.github.sachachtrl.matchppl.service.TagService;
 
 import io.github.cdimascio.dotenv.Dotenv;
@@ -102,13 +108,20 @@ public class Main {
         MatchListener matchListener = new MatchListener(profileService, tagService);
 
         ProposalRepository proposalRepo = new SqliteProposalRepository(database);
-        ProposalService proposalService = new ProposalService(proposalRepo, profileService, clock);
+        RoomRepository roomRepo = new SqliteRoomRepository(database);
+        RoomService roomService = new RoomService(roomRepo, profileService, guildConfigService, clock);
+        ProposalService proposalService = new ProposalService(proposalRepo, profileService, roomService, clock);
         MatchingService matchingService = new MatchingService(conditionChecker, new SecureRandom());
         MatchmakingService matchmakingService = new MatchmakingService(profileService, tagService, matchingService,
                 proposalService, guildConfigService, clock);
-        ProposalMessenger messenger = new ProposalMessenger(proposalService, profileService, tagService);
-        ProposalListener proposalListener = new ProposalListener(proposalService, messenger);
-        MemberListener memberListener = new MemberListener(profileService, proposalService, messenger);
+        ProposalMessenger messenger = new ProposalMessenger(proposalService, profileService, tagService,
+                roomService);
+        RoomManager roomManager = new RoomManager(roomService, proposalService, guildConfigService, messenger);
+        ProposalListener proposalListener = new ProposalListener(proposalService, messenger, roomManager);
+        RoomListener roomListener = new RoomListener(roomService, roomManager);
+        ReportListener reportListener = new ReportListener(roomService, proposalService, guildConfigService);
+        MemberListener memberListener = new MemberListener(profileService, proposalService, roomService, messenger,
+                roomManager);
         ResetListener resetListener = new ResetListener(proposalService, guildConfigService);
         InteractionTimer interactionTimer = new InteractionTimer(clock);
 
@@ -119,7 +132,7 @@ public class Main {
                 .setHttpClientBuilder(new OkHttpClient.Builder().pingInterval(HTTP_PING_INTERVAL))
                 .addEventListeners(interactionTimer.arrivalListener())
                 .addEventListeners(activityListener, matchListener, adminListener, tagListener, proposalListener,
-                        memberListener, resetListener, configListener)
+                        memberListener, resetListener, configListener, roomListener, reportListener)
                 .addEventListeners(interactionTimer.completionListener());
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
             Thread thread = new Thread(runnable, "matchmaking");
@@ -142,7 +155,8 @@ public class Main {
                             ResetListener.resetAllCommand(),
                             ConfigListener.command())
                     .queue();
-            scheduler.scheduleAtFixedRate(new MatchmakingTask(bot, proposalService, matchmakingService, messenger),
+            scheduler.scheduleAtFixedRate(new MatchmakingTask(bot, proposalService, matchmakingService, roomService,
+                            messenger, roomManager),
                     FIRST_ROUND_DELAY_SECONDS, ROUND_PERIOD_SECONDS, TimeUnit.SECONDS);
             log.info("Bot is logged in as {}", bot.getSelfUser().getAsTag());
         } catch (InvalidTokenException e) {

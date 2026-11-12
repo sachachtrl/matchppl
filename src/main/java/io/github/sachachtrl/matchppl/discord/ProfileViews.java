@@ -30,6 +30,8 @@ final class ProfileViews {
     static final String EXCLUDED = PREFIX + "excluded";
     static final String ANONYMOUS_ON = PREFIX + "anonymous:on";
     static final String ANONYMOUS_OFF = PREFIX + "anonymous:off";
+    static final String ROOMS_ON = PREFIX + "rooms:on";
+    static final String ROOMS_OFF = PREFIX + "rooms:off";
     static final String ADVANCED = PREFIX + "advanced";
     static final String MAIN = PREFIX + "main";
     static final String REQUIRED = PREFIX + "required";
@@ -51,12 +53,12 @@ final class ProfileViews {
         children.add(TextDisplay.of("## " + Messages.get(locale, "profile.title") + "\n-# "
                 + Messages.get(locale, "profile.subtitle")));
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
-        children.add(Section.of(searchButton(profile, locale), TextDisplay.of(
-                "**" + Messages.get(locale, "profile.search.title") + "**\n-# " + searchText(profile, locale))));
+        children.add(Section.of(searchButton(profile, locale), searchTexts(profile, locale)));
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
         children.add(Section.of(
                 Button.secondary(PRESENTATION, Messages.get(locale, "profile.button.edit")),
-                TextDisplay.of("**" + Messages.get(locale, "profile.presentation.title") + "**\n"
+                TextDisplay.of("**" + Messages.get(locale, "profile.presentation.title") + "**\n-# "
+                        + Messages.get(locale, "profile.presentation.hint") + "\n"
                         + presentationText(profile, locale))));
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
         children.add(TextDisplay.of("**" + Messages.get(locale, "profile.tags.title") + "**\n-# "
@@ -73,6 +75,8 @@ final class ProfileViews {
         }
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
         children.add(toggleSection(profile.anonymous(), ANONYMOUS_ON, ANONYMOUS_OFF, "profile.anonymous", locale));
+        children.add(Separator.createDivider(Separator.Spacing.SMALL));
+        children.add(toggleSection(profile.allowRooms(), ROOMS_ON, ROOMS_OFF, "profile.rooms", locale));
         children.add(Separator.createDivider(Separator.Spacing.LARGE));
         children.add(ActionRow.of(Button.secondary(ADVANCED, Messages.get(locale, "profile.button.advanced"))));
         return Container.of(children)
@@ -125,15 +129,17 @@ final class ProfileViews {
                 .withDisabled(profile.tagIds().isEmpty());
     }
 
-    private static String searchText(Profile profile, Locale locale) {
-        if (profile.searching()) {
-            return Messages.get(locale, "profile.search.enabled");
+    private static List<TextDisplay> searchTexts(Profile profile, Locale locale) {
+        List<TextDisplay> texts = new ArrayList<>();
+        texts.add(TextDisplay.of("**" + Messages.get(locale, "profile.search.title") + "**\n-# "
+                + Messages.get(locale, profile.searching() ? "profile.search.enabled" : "profile.search.disabled")));
+        if (!profile.searching() && profile.dmUnreachable()) {
+            texts.add(TextDisplay.of("-# " + Messages.get(locale, "profile.search.unreachable")));
         }
-        String text = Messages.get(locale, "profile.search.disabled");
-        if (profile.dmUnreachable()) {
-            text += "\n-# " + Messages.get(locale, "profile.search.unreachable");
+        if (!profile.searching() && profile.tagIds().isEmpty()) {
+            texts.add(TextDisplay.of("-# " + Messages.get(locale, "profile.search.needs_tags")));
         }
-        return profile.tagIds().isEmpty() ? text + "\n-# " + Messages.get(locale, "profile.search.needs_tags") : text;
+        return texts;
     }
 
     private static Button toggleButton(boolean enabled, String onId, String offId, Locale locale) {

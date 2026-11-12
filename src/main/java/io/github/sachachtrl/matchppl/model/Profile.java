@@ -11,6 +11,7 @@ public record Profile(
         boolean dmUnreachable,
         String presentation,
         boolean anonymous,
+        boolean allowRooms,
         Set<Long> tagIds,
         Set<Long> excludedTagIds,
         PartnerPreferences preferences) {
@@ -21,37 +22,43 @@ public record Profile(
     }
 
     public static Profile empty(long guildId, long userId) {
-        return new Profile(guildId, userId, false, null, false, null, false, Set.of(), Set.of(),
+        return new Profile(guildId, userId, false, null, false, null, false, true, Set.of(), Set.of(),
                 PartnerPreferences.DEFAULT);
     }
 
     public Profile withSearching(boolean value, Instant since) {
         return new Profile(this.guildId, this.userId, value, since, this.dmUnreachable, this.presentation,
-                this.anonymous, this.tagIds, this.excludedTagIds, this.preferences);
+                this.anonymous, this.allowRooms, this.tagIds, this.excludedTagIds, this.preferences);
     }
 
     public Profile withDmUnreachable(boolean value) {
         return new Profile(this.guildId, this.userId, this.searching, this.waitingSince, value, this.presentation,
-                this.anonymous, this.tagIds, this.excludedTagIds, this.preferences);
+                this.anonymous, this.allowRooms, this.tagIds, this.excludedTagIds, this.preferences);
     }
 
     public Profile withPresentation(String value) {
         return new Profile(this.guildId, this.userId, this.searching, this.waitingSince, this.dmUnreachable, value,
-                this.anonymous, this.tagIds, this.excludedTagIds, this.preferences);
+                this.anonymous, this.allowRooms, this.tagIds, this.excludedTagIds, this.preferences);
     }
 
     public Profile withAnonymous(boolean value) {
         return new Profile(this.guildId, this.userId, this.searching, this.waitingSince, this.dmUnreachable,
-                this.presentation, value, this.tagIds, this.excludedTagIds, this.preferences);
+                this.presentation, value, this.allowRooms, this.tagIds, this.excludedTagIds, this.preferences);
     }
 
     public Profile withTagSets(Set<Long> tags, Set<Long> excluded, Set<Long> required) {
         return new Profile(this.guildId, this.userId, this.searching, this.waitingSince, this.dmUnreachable,
-                this.presentation, this.anonymous, tags, excluded, this.preferences.withRequiredTagIds(required));
+                this.presentation, this.anonymous, this.allowRooms, tags, excluded,
+                this.preferences.withRequiredTagIds(required));
+    }
+
+    public Profile withAllowRooms(boolean value) {
+        return new Profile(this.guildId, this.userId, this.searching, this.waitingSince, this.dmUnreachable,
+                this.presentation, this.anonymous, value, this.tagIds, this.excludedTagIds, this.preferences);
     }
 
     public Profile withPreferences(PartnerPreferences value) {
         return new Profile(this.guildId, this.userId, this.searching, this.waitingSince, this.dmUnreachable,
-                this.presentation, this.anonymous, this.tagIds, this.excludedTagIds, value);
+                this.presentation, this.anonymous, this.allowRooms, this.tagIds, this.excludedTagIds, value);
     }
 }

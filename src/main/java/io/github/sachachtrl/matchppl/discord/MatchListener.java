@@ -91,6 +91,10 @@ public class MatchListener extends ListenerAdapter {
                 this.profileService.setAnonymous(guildId, userId, id.equals(ProfileViews.ANONYMOUS_ON));
                 this.edit(event, this.mainView(member, locale));
             }
+            case ProfileViews.ROOMS_ON, ProfileViews.ROOMS_OFF -> {
+                this.profileService.setAllowRooms(guildId, userId, id.equals(ProfileViews.ROOMS_ON));
+                this.edit(event, this.mainView(member, locale));
+            }
             case ProfileViews.EXCLUDE_ANONYMOUS_ON, ProfileViews.EXCLUDE_ANONYMOUS_OFF -> {
                 this.profileService.setExcludeAnonymous(guildId, userId,
                         id.equals(ProfileViews.EXCLUDE_ANONYMOUS_ON));

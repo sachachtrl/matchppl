@@ -3,12 +3,15 @@ package io.github.sachachtrl.matchppl.discord;
 import io.github.sachachtrl.matchppl.model.Profile;
 import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.model.ProposalStatus;
+import io.github.sachachtrl.matchppl.model.Room;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 import io.github.sachachtrl.matchppl.service.ProposalService;
+import io.github.sachachtrl.matchppl.service.RoomService;
 import io.github.sachachtrl.matchppl.service.TagService;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.entities.Guild;
@@ -25,11 +28,14 @@ public class ProposalMessenger {
     private final ProposalService proposalService;
     private final ProfileService profileService;
     private final TagService tagService;
+    private final RoomService roomService;
 
-    public ProposalMessenger(ProposalService proposalService, ProfileService profileService, TagService tagService) {
+    public ProposalMessenger(ProposalService proposalService, ProfileService profileService, TagService tagService,
+            RoomService roomService) {
         this.proposalService = proposalService;
         this.profileService = profileService;
         this.tagService = tagService;
+        this.roomService = roomService;
     }
 
     public void deliver(JDA jda, Proposal proposal) {
@@ -88,7 +94,8 @@ public class ProposalMessenger {
         Guild guild = jda.getGuildById(guildId);
         Profile viewerProfile = this.profileService.getProfile(guildId, viewerId);
         Profile otherProfile = this.profileService.getProfile(guildId, otherId);
-        boolean hidden = viewerProfile.anonymous() || otherProfile.anonymous();
+        boolean hidden = state != ProposalViews.CardState.MATCHED
+                && (viewerProfile.anonymous() || otherProfile.anonymous());
         Member otherMember = guild == null ? null : guild.getMemberById(otherId);
         String name;
         if (hidden) {
@@ -104,9 +111,32 @@ public class ProposalMessenger {
                 .map(TagViews::title)
                 .toList();
         String guildName = guild == null ? Messages.get(locale, "proposal.unknown_server") : guild.getName();
+        ProposalViews.MatchInfo match = state == ProposalViews.CardState.MATCHED
+                ? this.matchInfo(proposal, otherId, locale)
+                : null;
         return ProposalViews.card(proposal.id(), state, guildName,
                 new ProposalViews.OtherMember(name, avatarUrl, otherProfile.presentation()), commonTags,
-                proposal.deadline(), locale);
+                proposal.deadline(), match, locale);
+    }
+
+    void showMatched(JDA jda, Proposal proposal) {
+        this.update(jda, proposal, proposal.firstUserId(), ProposalViews.CardState.MATCHED);
+        this.update(jda, proposal, proposal.secondUserId(), ProposalViews.CardState.MATCHED);
+    }
+
+    private ProposalViews.MatchInfo matchInfo(Proposal proposal, long otherId, Locale locale) {
+        Optional<Room> room = this.roomService.findByProposal(proposal.id());
+        if (room.isPresent() && room.get().textChannelId() != null) {
+            return room.get().open()
+                    ? new ProposalViews.MatchInfo(Messages.format(locale, "proposal.state.matched.room",
+                            "<#" + room.get().textChannelId() + ">"), false)
+                    : new ProposalViews.MatchInfo(Messages.get(locale, "proposal.state.matched.room_closed"), true);
+        }
+        if (room.isPresent() && room.get().open()) {
+            return new ProposalViews.MatchInfo(Messages.get(locale, "proposal.state.matched.creating"), false);
+        }
+        return new ProposalViews.MatchInfo(Messages.format(locale, "proposal.state.matched.direct",
+                "<@" + otherId + ">"), true);
     }
 
     private void send(JDA jda, Proposal proposal, long viewerId, Runnable onSuccess, Runnable onFailure) {

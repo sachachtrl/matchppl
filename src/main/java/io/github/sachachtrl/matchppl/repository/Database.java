@@ -104,6 +104,25 @@ public class Database implements AutoCloseable {
                         PRIMARY KEY (tag_id, role_id, kind)
                     )
                     """);
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS room (
+                        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                        guild_id         INTEGER NOT NULL,
+                        proposal_id      INTEGER NOT NULL,
+                        first_user_id    INTEGER NOT NULL,
+                        second_user_id   INTEGER NOT NULL,
+                        number           INTEGER NOT NULL,
+                        text_channel_id  INTEGER,
+                        voice_channel_id INTEGER,
+                        created_at       INTEGER NOT NULL,
+                        delete_at        INTEGER NOT NULL,
+                        open             INTEGER NOT NULL,
+                        reminder_sent    INTEGER NOT NULL DEFAULT 0
+                    )
+                    """);
+            statement.executeUpdate("""
+                    CREATE INDEX IF NOT EXISTS room_by_status ON room (guild_id, open)
+                    """);
         }
     }
 
@@ -121,6 +140,7 @@ public class Database implements AutoCloseable {
         this.addColumnIfMissing("profile", "min_common_tags", "INTEGER NOT NULL DEFAULT 1");
         this.addColumnIfMissing("profile", "waiting_since", "TEXT");
         this.addColumnIfMissing("profile", "dm_unreachable", "INTEGER NOT NULL DEFAULT 0");
+        this.addColumnIfMissing("profile", "allow_rooms", "INTEGER NOT NULL DEFAULT 1");
         this.addColumnIfMissing("proposal", "unblocked", "INTEGER NOT NULL DEFAULT 0");
     }
 

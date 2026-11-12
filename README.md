@@ -19,7 +19,7 @@ Match People suggests members of a server to each other, one person at a time, b
 
 What the matching is *for* is up to each server — finding teammates, planning outings, meeting people — so admins configure everything: tags, access conditions and timings.
 
-> **Status: work in progress.** The core infrastructure is in place; the matching engine is under development.
+> **Status: work in progress.** Matching, proposals and private channels work end to end; crash recovery is next.
 
 ## Features
 
@@ -32,15 +32,17 @@ What the matching is *for* is up to each server — finding teammates, planning 
 - **Matching** — every minute, the bot pairs searching members server-wide. The score is the number of shared tags divided by the larger tag count, so it is identical on both sides; every filter is checked in both directions, the best scores are served first, and ties go to whoever has been waiting the longest.
 - **Double-blind proposals** — sent privately to both members at once, with *Skip* and *Accept* buttons and a response deadline. Accepting can be cancelled, and nobody is ever told the other person's answer: a refusal is indistinguishable from no answer. If either member is anonymous, neither sees the other's name or avatar. A pair that ended without a match is never proposed again.
 - **`/reset <user>`** / **`/resetall`** — let admins lift those restrictions for one member or for the whole server, behind a clear confirmation card. The history itself is kept.
+- **Private channels** — when both members accept, the bot opens a private text and voice channel that only they can see, named after the server's prefix and the lowest free number (*Match #1*, *Match #2*…). Both members stay out of matchmaking while it exists; either of them can end it early, and it is deleted automatically when its lifetime ends, with a reminder an hour before. Members who prefer not to get a channel can turn it off in `/match`: they receive each other's profile by direct message instead. A match always reveals both identities, even in anonymous mode.
+- **Reports** — every channel and every match without a channel has a *Report a problem* button. Reports go to the server's log channel, mentioning the bot's admin roles, or by direct message to members with the *Manage Server* permission when no log channel is set. The other member is never told.
+- **`/config`** — server settings for admins in a single card: response delay, matching frequency, private channels on or off, channel lifetime, name prefix, category and log channel.
 - **Activity tracking** — daily message counts per member, used later for tag access conditions. The bot never reads message content.
 - **Translatable interface** — every user-facing text lives in resource bundles, with English as the default language.
 - **Modern message layout** — replies use Discord's Components V2: cards with sections, separators and inline buttons.
 
 ### Planned
 
-- **Temporary channels** — a private text and voice channel for each mutual match, deleted when its lifetime ends.
 - **Crash recovery** — deadlines are already stored as absolute UTC instants and processed by the periodic task; a heartbeat will also detect downtime on restart and cleanly interrupt the proposals that were in progress.
-- **`/config`** — server settings for admins: response delay, channel lifetime, matching frequency and language.
+- **Language setting** — a server-wide language option in `/config`, as soon as a first translation is available.
 
 ## Tech stack
 
@@ -61,8 +63,9 @@ discord/      Layer 1 — JDA listeners: commands, buttons, message events, and 
               Translates Discord events into plain values and never makes decisions.
 service/      Layer 2 — business rules. Does not depend on JDA, so it can be unit tested.
 repository/   Layer 3 — data access. The only place containing SQL.
-scheduler/    Layer 4 — the periodic task: closes expired proposals, then runs a
-              matchmaking round on every server through layer 2.
+scheduler/    Layer 4 — the periodic task: closes expired proposals and channels, sends
+              channel reminders, then runs a matchmaking round on every server
+              through layer 2.
 ```
 
 Services depend on repository **interfaces**, and every dependency is injected through constructors. Storage can therefore change without touching the business rules: activity tracking moved from an in-memory map to SQLite without modifying a single line of its service or listener.
@@ -74,6 +77,7 @@ Services depend on repository **interfaces**, and every dependency is injected t
 - JDK 25
 - Maven 3.9+
 - A Discord application with a bot user, created on the [Discord Developer Portal](https://discord.com/developers/applications), invited to a server with the `bot` and `applications.commands` scopes
+- The bot role needs the **Manage Channels** and **Manage Roles** permissions to create the private channels, and **Mention All Roles** if the admin roles mentioned in reports are not mentionable
 - The **Server Members Intent** enabled in the portal (*Bot* → *Privileged Gateway Intents*); without it, the bot refuses to start
 
 ### Run
@@ -104,6 +108,7 @@ mvn test
 - Profiles are **per server** and cannot be copied from one server to another. A member's profile is **deleted** as soon as they leave the server.
 - Member introductions are **encrypted at rest** with AES-256-GCM. The key lives outside the database, so a leaked database file alone reveals none of them.
 - Excluded tags are private: the other person is never told why they were not proposed.
+- Reports are only sent to the server's admins and are not stored by the bot.
 - The bot stores no images.
 
 ## License

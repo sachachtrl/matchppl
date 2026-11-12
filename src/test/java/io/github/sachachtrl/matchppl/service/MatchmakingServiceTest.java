@@ -9,6 +9,7 @@ import io.github.sachachtrl.matchppl.repository.InMemoryActivityRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProposalRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteRoomRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteTagRepository;
 import io.github.sachachtrl.matchppl.repository.TextCipher;
 
@@ -50,6 +51,8 @@ class MatchmakingServiceTest {
         this.profileService = new ProfileService(
                 new SqliteProfileRepository(this.database, new TextCipher(new byte[32])), tagService, this.clock);
         this.proposalService = new ProposalService(new SqliteProposalRepository(this.database), this.profileService,
+                new RoomService(new SqliteRoomRepository(this.database), this.profileService,
+                        new GuildConfigService(new SqliteGuildConfigRepository(this.database)), this.clock),
                 this.clock);
         GuildConfigService guildConfigService = new GuildConfigService(new SqliteGuildConfigRepository(this.database));
         this.service = new MatchmakingService(this.profileService, tagService,

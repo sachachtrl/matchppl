@@ -29,7 +29,7 @@ public class SqliteProfileRepository implements ProfileRepository {
     private static final String FIND_SQL = """
             SELECT searching, presentation, anonymous, min_compatibility, exclude_anonymous,
                    min_account_age_days, min_member_days, min_messages, activity_period,
-                   exclude_default_avatars, min_common_tags, waiting_since, dm_unreachable
+                   exclude_default_avatars, min_common_tags, waiting_since, dm_unreachable, allow_rooms
             FROM profile
             WHERE guild_id = ? AND user_id = ?
             """;
@@ -40,8 +40,8 @@ public class SqliteProfileRepository implements ProfileRepository {
             INSERT INTO profile (guild_id, user_id, searching, presentation, anonymous, min_compatibility,
                                  exclude_anonymous, min_account_age_days, min_member_days, min_messages,
                                  activity_period, exclude_default_avatars, min_common_tags, waiting_since,
-                                 dm_unreachable)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 dm_unreachable, allow_rooms)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (guild_id, user_id) DO UPDATE SET
                 searching = excluded.searching,
                 presentation = excluded.presentation,
@@ -55,7 +55,8 @@ public class SqliteProfileRepository implements ProfileRepository {
                 exclude_default_avatars = excluded.exclude_default_avatars,
                 min_common_tags = excluded.min_common_tags,
                 waiting_since = excluded.waiting_since,
-                dm_unreachable = excluded.dm_unreachable
+                dm_unreachable = excluded.dm_unreachable,
+                allow_rooms = excluded.allow_rooms
             """;
     private static final String DELETE_TAGS_SQL = """
             DELETE FROM profile_tag WHERE guild_id = ? AND user_id = ?
@@ -114,6 +115,7 @@ public class SqliteProfileRepository implements ProfileRepository {
                             result.getBoolean(13),
                             this.decryptPresentation(result.getString(2), guildId, userId),
                             result.getBoolean(3),
+                            result.getBoolean(14),
                             chosen,
                             excluded,
                             preferences);
@@ -213,6 +215,7 @@ public class SqliteProfileRepository implements ProfileRepository {
             statement.setInt(13, preferences.minCommonTags());
             statement.setString(14, profile.waitingSince() == null ? null : profile.waitingSince().toString());
             statement.setBoolean(15, profile.dmUnreachable());
+            statement.setBoolean(16, profile.allowRooms());
             statement.executeUpdate();
         }
     }

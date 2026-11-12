@@ -4,6 +4,7 @@ import io.github.sachachtrl.matchppl.model.MatchPair;
 import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.model.ProposalAnswer;
 import io.github.sachachtrl.matchppl.model.ProposalStatus;
+import io.github.sachachtrl.matchppl.model.Room;
 import io.github.sachachtrl.matchppl.model.UserPair;
 import io.github.sachachtrl.matchppl.repository.ProposalRepository;
 
@@ -11,6 +12,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -26,7 +28,7 @@ public class ProposalService {
 
     public record Accepted(Proposal proposal) implements AnswerResult {}
 
-    public record Matched(Proposal proposal) implements AnswerResult {}
+    public record Matched(Proposal proposal, Optional<Room> room) implements AnswerResult {}
 
     public record Skipped(Proposal proposal) implements AnswerResult {}
 
@@ -36,18 +38,21 @@ public class ProposalService {
 
     private final ProposalRepository proposalRepo;
     private final ProfileService profileService;
+    private final RoomService roomService;
     private final Clock clock;
 
-    public ProposalService(ProposalRepository proposalRepo, ProfileService profileService, Clock clock) {
+    public ProposalService(ProposalRepository proposalRepo, ProfileService profileService, RoomService roomService,
+            Clock clock) {
         this.proposalRepo = proposalRepo;
         this.profileService = profileService;
+        this.roomService = roomService;
         this.clock = clock;
     }
 
     public synchronized List<Proposal> createProposals(long guildId, List<MatchPair> pairs, Duration responseDelay) {
         Instant now = this.clock.instant();
         List<Proposal> created = new ArrayList<>();
-        Set<Long> busy = this.proposalRepo.findBusyUsers(guildId);
+        Set<Long> busy = this.busyUsers(guildId);
         for (MatchPair pair : pairs) {
             if (busy.contains(pair.firstUserId()) || busy.contains(pair.secondUserId())) {
                 continue;
@@ -108,7 +113,9 @@ public class ProposalService {
     }
 
     public Set<Long> busyUsers(long guildId) {
-        return this.proposalRepo.findBusyUsers(guildId);
+        Set<Long> busy = new HashSet<>(this.proposalRepo.findBusyUsers(guildId));
+        busy.addAll(this.roomService.busyUsers(guildId));
+        return busy;
     }
 
     public Set<UserPair> blockedPairs(long guildId) {
@@ -145,7 +152,9 @@ public class ProposalService {
         }
         Proposal updated = this.proposalRepo.findById(proposal.id()).orElseThrow();
         if (this.proposalRepo.markMatched(proposal.id())) {
-            return new Matched(this.proposalRepo.findById(proposal.id()).orElseThrow());
+            Proposal matched = this.proposalRepo.findById(proposal.id()).orElseThrow();
+            this.releaseMembers(matched);
+            return new Matched(matched, this.roomService.openIfWanted(matched));
         }
         return new Accepted(updated);
     }

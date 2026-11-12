@@ -55,7 +55,7 @@ class SqliteProfileRepositoryTest {
         PartnerPreferences preferences = new PartnerPreferences(Set.of(1L), 50, 2, true, true,
                 new MemberConditions(30, 7, 20, ActivityPeriod.TWO_WEEKS));
         Profile profile = new Profile(GUILD, USER, true, Instant.parse("2026-11-11T12:00:00Z"), true, "Chill player",
-                true, Set.of(1L, 2L), Set.of(3L), preferences);
+                true, false, Set.of(1L, 2L), Set.of(3L), preferences);
 
         this.repository.save(profile);
 

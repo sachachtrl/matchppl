@@ -14,10 +14,12 @@ public class ProposalListener extends ListenerAdapter {
 
     private final ProposalService proposalService;
     private final ProposalMessenger messenger;
+    private final RoomManager roomManager;
 
-    public ProposalListener(ProposalService proposalService, ProposalMessenger messenger) {
+    public ProposalListener(ProposalService proposalService, ProposalMessenger messenger, RoomManager roomManager) {
         this.proposalService = proposalService;
         this.messenger = messenger;
+        this.roomManager = roomManager;
     }
 
     @Override
@@ -50,7 +52,9 @@ public class ProposalListener extends ListenerAdapter {
                 this.show(event, proposal, userId, ProposalViews.CardState.MATCHED);
                 this.messenger.update(event.getJDA(), proposal, proposal.otherUserId(userId),
                         ProposalViews.CardState.MATCHED);
-                log.info("Match: proposal={}, guild={}", proposal.id(), proposal.guildId());
+                log.info("Match: proposal={}, guild={}, room={}", proposal.id(), proposal.guildId(),
+                        matched.room().isPresent());
+                matched.room().ifPresent(room -> this.roomManager.open(event.getJDA(), proposal, room));
             }
             case ProposalService.Ignored _ -> {
                 Optional<Proposal> current = this.proposalService.findProposal(proposalId)
