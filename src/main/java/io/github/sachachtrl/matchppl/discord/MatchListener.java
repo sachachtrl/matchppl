@@ -83,6 +83,10 @@ public class MatchListener extends ListenerAdapter {
         Locale locale = this.guildConfigService.language(member.getGuild().getIdLong());
         long guildId = member.getGuild().getIdLong();
         long userId = member.getIdLong();
+        if (id.startsWith(ProfileViews.PAGE)) {
+            this.changePage(event, member, id.substring(ProfileViews.PAGE.length()).split(":"), locale);
+            return;
+        }
         switch (id) {
             case ProfileViews.SEARCH_ON, ProfileViews.SEARCH_OFF -> {
                 boolean searching = id.equals(ProfileViews.SEARCH_ON);
@@ -134,19 +138,28 @@ public class MatchListener extends ListenerAdapter {
             this.edit(event, this.advancedView(member, locale));
             return;
         }
-        Set<Long> tagIds = event.getValues().stream().map(Long::parseLong).collect(Collectors.toSet());
-        switch (id) {
+        String[] parts = id.split(":");
+        if (parts.length != 4) {
+            return;
+        }
+        ProfileViews.TagPages pages = new ProfileViews.TagPages(Integer.parseInt(parts[2]),
+                Integer.parseInt(parts[3]));
+        Set<Long> shown = event.getComponent().getOptions().stream()
+                .map(option -> Long.parseLong(option.getValue()))
+                .collect(Collectors.toSet());
+        Set<Long> selected = event.getValues().stream().map(Long::parseLong).collect(Collectors.toSet());
+        switch (parts[0] + ":" + parts[1]) {
             case ProfileViews.TAGS -> {
-                this.profileService.setTags(MemberSnapshots.of(member), tagIds);
-                this.edit(event, this.mainView(member, locale));
+                this.profileService.setTags(MemberSnapshots.of(member), shown, selected);
+                this.edit(event, this.mainView(member, pages, locale));
             }
             case ProfileViews.EXCLUDED -> {
-                this.profileService.setExcludedTags(guildId, userId, tagIds);
-                this.edit(event, this.mainView(member, locale));
+                this.profileService.setExcludedTags(guildId, userId, shown, selected);
+                this.edit(event, this.mainView(member, pages, locale));
             }
             case ProfileViews.REQUIRED -> {
-                this.profileService.setRequiredTags(guildId, userId, tagIds);
-                this.edit(event, this.advancedView(member, locale));
+                this.profileService.setRequiredTags(guildId, userId, shown, selected);
+                this.edit(event, this.advancedView(member, pages, locale));
             }
             default -> {
             }
@@ -202,17 +215,40 @@ public class MatchListener extends ListenerAdapter {
         }
     }
 
+    private void changePage(ButtonInteractionEvent event, Member member, String[] parts, Locale locale) {
+        if (parts.length != 4) {
+            return;
+        }
+        String menu = ProfileViews.PREFIX + parts[0];
+        int index = menu.equals(ProfileViews.EXCLUDED) ? 1 : 0;
+        int step = parts[1].equals(ProfileViews.NEXT) ? 1 : -1;
+        ProfileViews.TagPages pages = new ProfileViews.TagPages(Integer.parseInt(parts[2]),
+                Integer.parseInt(parts[3]));
+        ProfileViews.TagPages moved = pages.with(index, Math.max(0, pages.get(index) + step));
+        this.edit(event, menu.equals(ProfileViews.REQUIRED)
+                ? this.advancedView(member, moved, locale)
+                : this.mainView(member, moved, locale));
+    }
+
     private Container mainView(Member member, Locale locale) {
+        return this.mainView(member, ProfileViews.TagPages.FIRST, locale);
+    }
+
+    private Container mainView(Member member, ProfileViews.TagPages pages, Locale locale) {
         long guildId = member.getGuild().getIdLong();
         Profile profile = this.profileService.getProfile(guildId, member.getIdLong());
         return ProfileViews.mainCard(profile, this.tagService.usableTags(MemberSnapshots.of(member)),
-                this.tagService.listTags(guildId), locale);
+                this.tagService.listTags(guildId), pages, locale);
     }
 
     private Container advancedView(Member member, Locale locale) {
+        return this.advancedView(member, ProfileViews.TagPages.FIRST, locale);
+    }
+
+    private Container advancedView(Member member, ProfileViews.TagPages pages, Locale locale) {
         long guildId = member.getGuild().getIdLong();
         Profile profile = this.profileService.getProfile(guildId, member.getIdLong());
-        return ProfileViews.advancedCard(profile, this.tagService.listTags(guildId), locale);
+        return ProfileViews.advancedCard(profile, this.tagService.listTags(guildId), pages, locale);
     }
 
     private Modal presentationModal(long guildId, long userId, Locale locale) {

@@ -78,6 +78,36 @@ class ProfileServiceTest {
     }
 
     @Test
+    void aMenuOnlyReplacesTheTagsItShowed() {
+        this.service.setTags(MEMBER, Set.of(this.finals.id(), this.medium.id()));
+
+        Profile profile = this.service.setTags(MEMBER, Set.of(this.medium.id(), this.light.id()),
+                Set.of(this.light.id()));
+
+        assertEquals(Set.of(this.finals.id(), this.light.id()), profile.tagIds());
+    }
+
+    @Test
+    void excludedAndRequiredMenusAlsoKeepTheTagsOfOtherPages() {
+        this.service.setExcludedTags(GUILD, USER, Set.of(this.finals.id()));
+        this.service.setRequiredTags(GUILD, USER, Set.of(this.medium.id()));
+
+        this.service.setExcludedTags(GUILD, USER, Set.of(this.light.id()), Set.of(this.light.id()));
+        Profile profile = this.service.setRequiredTags(GUILD, USER, Set.of(this.light.id()), Set.of());
+
+        assertEquals(Set.of(this.finals.id(), this.light.id()), profile.excludedTagIds());
+        assertEquals(Set.of(this.medium.id()), profile.preferences().requiredTagIds());
+    }
+
+    @Test
+    void aMenuCannotAddATagItDidNotShow() {
+        Profile profile = this.service.setTags(MEMBER, Set.of(this.finals.id()),
+                Set.of(this.finals.id(), this.medium.id()));
+
+        assertEquals(Set.of(this.finals.id()), profile.tagIds());
+    }
+
+    @Test
     void anAdminCanStopTheSearchOfEveryMemberOfOneServer() {
         long otherGuild = 2L;
         for (MemberSnapshot member : List.of(MEMBER, new MemberSnapshot(GUILD, USER + 1, NOW, NOW, Set.of(), true))) {

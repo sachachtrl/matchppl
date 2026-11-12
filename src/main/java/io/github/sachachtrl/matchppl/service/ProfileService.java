@@ -93,6 +93,22 @@ public class ProfileService {
                 profile.preferences().requiredTagIds());
     }
 
+    public Profile setTags(MemberSnapshot member, Set<Long> shown, Set<Long> selected) {
+        Profile profile = this.profileRepo.find(member.guildId(), member.userId());
+        return this.setTags(member, replaceWithin(profile.tagIds(), shown, selected));
+    }
+
+    public Profile setExcludedTags(long guildId, long userId, Set<Long> shown, Set<Long> selected) {
+        Profile profile = this.profileRepo.find(guildId, userId);
+        return this.setExcludedTags(guildId, userId, replaceWithin(profile.excludedTagIds(), shown, selected));
+    }
+
+    public Profile setRequiredTags(long guildId, long userId, Set<Long> shown, Set<Long> selected) {
+        Profile profile = this.profileRepo.find(guildId, userId);
+        return this.setRequiredTags(guildId, userId,
+                replaceWithin(profile.preferences().requiredTagIds(), shown, selected));
+    }
+
     public Profile setExcludedTags(long guildId, long userId, Set<Long> tagIds) {
         Set<Long> excluded = intersection(tagIds, this.existingTagIds(guildId));
         Profile profile = this.profileRepo.find(guildId, userId);
@@ -170,6 +186,13 @@ public class ProfileService {
 
     private Set<Long> existingTagIds(long guildId) {
         return this.tagService.listTags(guildId).stream().map(Tag::id).collect(Collectors.toSet());
+    }
+
+    private static Set<Long> replaceWithin(Set<Long> current, Set<Long> shown, Set<Long> selected) {
+        Set<Long> result = new HashSet<>(current);
+        result.removeAll(shown);
+        result.addAll(intersection(selected, shown));
+        return result;
     }
 
     private static Set<Long> intersection(Set<Long> requested, Set<Long> allowed) {

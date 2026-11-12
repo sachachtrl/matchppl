@@ -25,7 +25,7 @@ What the matching is *for* is up to each server — finding teammates, planning 
 
 ### Available
 
-- **`/match`** — a single private card to manage your profile: enable or disable your search, write a short introduction with a live preview, pick your tags (only the ones you are allowed to use), exclude tags you never want to be matched with, and switch to anonymous mode. An advanced card adds required tags, a minimum number of tags in common, a minimum compatibility, the option to exclude anonymous members or accounts with a default avatar, and conditions on the other person.
+- **`/match`** — a single private card to manage your profile: enable or disable your search, write a short introduction with a live preview, pick your tags (only the ones you are allowed to use), exclude tags you never want to be matched with, and switch to anonymous mode. An advanced card adds required tags, a minimum number of tags in common, a minimum compatibility, the option to exclude anonymous members or accounts with a default avatar, and conditions on the other person. Tag menus are split into pages of 25 when a server has more tags, and saving one page never touches the tags chosen on the others.
 - **`/setadmin <role>`** / **`/removeadmin <role>`** / **`/listadmin`** — choose which roles may use the bot's admin commands (requires the *Manage Server* permission). `/listadmin` shows them in a card where roles can be removed or added in bulk; every click re-reads the database, so the card always reflects the real state even when another command changed it.
 - **`/newtag <name> <emoji>`** — create an independent tag (a game, a city…) and configure its access conditions in place: minimum account age, time on the server, recent activity, required and forbidden roles. Every change is saved instantly.
 - **`/tags`** — browse the server's tags page by page, open any of them in the same configuration card, and delete them after confirmation.
@@ -42,7 +42,6 @@ What the matching is *for* is up to each server — finding teammates, planning 
 
 ### Planned
 
-- **Tag pagination** — tag menus are limited to 25 options by Discord; servers with more tags will get pages or a search.
 - **Activity retention** — daily message counts will be purged after 30 days, with an all-time total kept separately.
 
 ## Tech stack

@@ -42,13 +42,33 @@ final class ProfileViews {
     static final String EXCLUDE_AVATARS_OFF = PREFIX + "excludeavatars:off";
     static final String MIN_COMMON_TAGS = PREFIX + "mincommontags";
     static final String CONDITIONS = PREFIX + "conditions";
+    static final String PAGE = PREFIX + "page:";
+    static final String PREVIOUS = "previous";
+    static final String NEXT = "next";
 
     static final int MAX_SELECT_OPTIONS = 25;
+
+    record TagPages(int first, int second) {
+        static final TagPages FIRST = new TagPages(0, 0);
+
+        int get(int index) {
+            return index == 0 ? this.first : this.second;
+        }
+
+        TagPages with(int index, int page) {
+            return index == 0 ? new TagPages(page, this.second) : new TagPages(this.first, page);
+        }
+
+        String suffix() {
+            return ":" + this.first + ":" + this.second;
+        }
+    }
 
     private ProfileViews() {
     }
 
-    static Container mainCard(Profile profile, List<Tag> usableTags, List<Tag> allTags, Locale locale) {
+    static Container mainCard(Profile profile, List<Tag> usableTags, List<Tag> allTags, TagPages pages,
+            Locale locale) {
         List<ContainerChildComponent> children = new ArrayList<>();
         children.add(TextDisplay.of("## " + Messages.get(locale, "profile.title") + "\n-# "
                 + Messages.get(locale, "profile.subtitle")));
@@ -64,14 +84,14 @@ final class ProfileViews {
         children.add(TextDisplay.of("**" + Messages.get(locale, "profile.tags.title") + "**\n-# "
                 + Messages.get(locale, usableTags.isEmpty() ? "profile.tags.none" : "profile.tags.hint")));
         if (!usableTags.isEmpty()) {
-            children.add(ActionRow.of(tagSelect(TAGS, usableTags, profile.tagIds(),
-                    Messages.get(locale, "profile.tags.placeholder"))));
+            addTagMenu(children, TAGS, 0, usableTags, profile.tagIds(), pages,
+                    Messages.get(locale, "profile.tags.placeholder"), locale);
         }
         if (!allTags.isEmpty()) {
             children.add(TextDisplay.of("**" + Messages.get(locale, "profile.excluded.title") + "**\n-# "
                     + Messages.get(locale, "profile.excluded.hint")));
-            children.add(ActionRow.of(tagSelect(EXCLUDED, allTags, profile.excludedTagIds(),
-                    Messages.get(locale, "profile.excluded.placeholder"))));
+            addTagMenu(children, EXCLUDED, 1, allTags, profile.excludedTagIds(), pages,
+                    Messages.get(locale, "profile.excluded.placeholder"), locale);
         }
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
         children.add(toggleSection(profile.anonymous(), ANONYMOUS_ON, ANONYMOUS_OFF, "profile.anonymous", locale));
@@ -83,7 +103,7 @@ final class ProfileViews {
                 .withAccentColor(profile.searching() ? Cards.SUCCESS_COLOR : Cards.ERROR_COLOR);
     }
 
-    static Container advancedCard(Profile profile, List<Tag> allTags, Locale locale) {
+    static Container advancedCard(Profile profile, List<Tag> allTags, TagPages pages, Locale locale) {
         PartnerPreferences preferences = profile.preferences();
         List<ContainerChildComponent> children = new ArrayList<>();
         children.add(TextDisplay.of("## " + Messages.get(locale, "advanced.title") + "\n-# "
@@ -92,8 +112,8 @@ final class ProfileViews {
             children.add(Separator.createDivider(Separator.Spacing.SMALL));
             children.add(TextDisplay.of("**" + Messages.get(locale, "advanced.required.title") + "**\n-# "
                     + Messages.get(locale, "advanced.required.hint")));
-            children.add(ActionRow.of(tagSelect(REQUIRED, allTags, preferences.requiredTagIds(),
-                    Messages.get(locale, "advanced.required.placeholder"))));
+            addTagMenu(children, REQUIRED, 0, allTags, preferences.requiredTagIds(), pages,
+                    Messages.get(locale, "advanced.required.placeholder"), locale);
         }
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
         children.add(TextDisplay.of("**" + Messages.get(locale, "advanced.common.title") + "**\n-# "
@@ -187,8 +207,37 @@ final class ProfileViews {
         };
     }
 
-    private static StringSelectMenu tagSelect(String id, List<Tag> tags, Set<Long> selected, String placeholder) {
-        List<Tag> shown = tags.subList(0, Math.min(tags.size(), MAX_SELECT_OPTIONS));
+    static int pageCount(List<Tag> tags) {
+        return Math.max(1, (tags.size() + MAX_SELECT_OPTIONS - 1) / MAX_SELECT_OPTIONS);
+    }
+
+    static int clampPage(List<Tag> tags, int page) {
+        return Math.max(0, Math.min(page, pageCount(tags) - 1));
+    }
+
+    static List<Tag> page(List<Tag> tags, int page) {
+        int start = clampPage(tags, page) * MAX_SELECT_OPTIONS;
+        return tags.subList(start, Math.min(tags.size(), start + MAX_SELECT_OPTIONS));
+    }
+
+    private static void addTagMenu(List<ContainerChildComponent> children, String menu, int index, List<Tag> tags,
+            Set<Long> selected, TagPages pages, String placeholder, Locale locale) {
+        int count = pageCount(tags);
+        int current = clampPage(tags, pages.get(index));
+        TagPages shown = pages.with(index, current);
+        String text = count > 1 ? placeholder + " (" + (current + 1) + "/" + count + ")" : placeholder;
+        children.add(ActionRow.of(tagSelect(menu + shown.suffix(), page(tags, current), selected, text)));
+        if (count > 1) {
+            String pager = PAGE + menu.substring(PREFIX.length()) + ":";
+            children.add(ActionRow.of(
+                    Button.secondary(pager + PREVIOUS + shown.suffix(), Messages.get(locale, "tags.button.previous"))
+                            .withDisabled(current == 0),
+                    Button.secondary(pager + NEXT + shown.suffix(), Messages.get(locale, "tags.button.next"))
+                            .withDisabled(current == count - 1)));
+        }
+    }
+
+    private static StringSelectMenu tagSelect(String id, List<Tag> shown, Set<Long> selected, String placeholder) {
         List<SelectOption> options = shown.stream()
                 .map(tag -> SelectOption.of(tag.name(), String.valueOf(tag.id()))
                         .withEmoji(Emoji.fromFormatted(tag.emoji()))
