@@ -33,6 +33,12 @@ public class InMemoryActivityRepository implements ActivityRepository {
     }
 
     @Override
+    public void deleteMember(long guildId, long userId) {
+        this.counts.keySet().removeIf(key -> key.guildId() == guildId && key.userId() == userId);
+        this.totals.remove(new TotalKey(guildId, userId));
+    }
+
+    @Override
     public int deleteDaysBefore(LocalDate day) {
         int before = this.counts.size();
         this.counts.keySet().removeIf(key -> key.day().isBefore(day));

@@ -4,6 +4,7 @@ import io.github.sachachtrl.matchppl.discord.ActivityListener;
 import io.github.sachachtrl.matchppl.discord.AdminListener;
 import io.github.sachachtrl.matchppl.discord.BotCommands;
 import io.github.sachachtrl.matchppl.discord.ConfigListener;
+import io.github.sachachtrl.matchppl.discord.GuildListener;
 import io.github.sachachtrl.matchppl.discord.InteractionTimer;
 import io.github.sachachtrl.matchppl.discord.MatchListener;
 import io.github.sachachtrl.matchppl.discord.MemberListener;
@@ -18,12 +19,14 @@ import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.GuildConfigRepository;
+import io.github.sachachtrl.matchppl.repository.GuildDataRepository;
 import io.github.sachachtrl.matchppl.repository.HeartbeatRepository;
 import io.github.sachachtrl.matchppl.repository.ProfileRepository;
 import io.github.sachachtrl.matchppl.repository.ProposalRepository;
 import io.github.sachachtrl.matchppl.repository.RoomRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteActivityRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteGuildDataRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteHeartbeatRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProposalRepository;
@@ -36,6 +39,7 @@ import io.github.sachachtrl.matchppl.scheduler.MatchmakingTask;
 import io.github.sachachtrl.matchppl.service.ActivityService;
 import io.github.sachachtrl.matchppl.service.ConditionChecker;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
+import io.github.sachachtrl.matchppl.service.GuildDataService;
 import io.github.sachachtrl.matchppl.service.HeartbeatService;
 import io.github.sachachtrl.matchppl.service.MatchingService;
 import io.github.sachachtrl.matchppl.service.MatchmakingService;
@@ -130,8 +134,11 @@ public class Main {
         RoomListener roomListener = new RoomListener(roomService, roomManager, guildConfigService);
         ReportListener reportListener = new ReportListener(roomService, proposalService, guildConfigService);
         MemberListener memberListener = new MemberListener(profileService, proposalService, roomService, messenger,
-                roomManager);
+                roomManager, activityService);
         ResetListener resetListener = new ResetListener(proposalService, guildConfigService);
+        GuildDataRepository guildDataRepo = new SqliteGuildDataRepository(database);
+        GuildDataService guildDataService = new GuildDataService(guildDataRepo);
+        GuildListener guildListener = new GuildListener(guildDataService, proposalService, messenger);
         InteractionTimer interactionTimer = new InteractionTimer(clock);
 
         HeartbeatRepository heartbeatRepo = new SqliteHeartbeatRepository(database);
@@ -148,7 +155,7 @@ public class Main {
                 .setHttpClientBuilder(new OkHttpClient.Builder().pingInterval(HTTP_PING_INTERVAL))
                 .addEventListeners(interactionTimer.arrivalListener())
                 .addEventListeners(activityListener, matchListener, adminListener, tagListener, proposalListener,
-                        memberListener, resetListener, configListener, roomListener, reportListener)
+                        memberListener, resetListener, configListener, roomListener, reportListener, guildListener)
                 .addEventListeners(interactionTimer.completionListener());
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
             Thread thread = new Thread(runnable, "matchmaking");

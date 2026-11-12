@@ -28,6 +28,10 @@ public class ActivityService {
         };
     }
 
+    public void forgetMember(long guildId, long userId) {
+        this.activityRepo.deleteMember(guildId, userId);
+    }
+
     public int purgeOldDays(LocalDate today) {
         return this.activityRepo.deleteDaysBefore(firstKeptDay(today));
     }

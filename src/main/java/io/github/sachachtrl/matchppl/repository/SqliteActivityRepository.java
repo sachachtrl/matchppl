@@ -28,6 +28,12 @@ public class SqliteActivityRepository implements ActivityRepository {
     private static final String DELETE_BEFORE_SQL = """
             DELETE FROM message_activity WHERE day < ?
             """;
+    private static final String DELETE_MEMBER_DAYS_SQL = """
+            DELETE FROM message_activity WHERE guild_id = ? AND user_id = ?
+            """;
+    private static final String DELETE_MEMBER_TOTAL_SQL = """
+            DELETE FROM message_total WHERE guild_id = ? AND user_id = ?
+            """;
 
     private final Connection connection;
 
@@ -95,6 +101,32 @@ public class SqliteActivityRepository implements ActivityRepository {
                 }
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to count all messages", e);
+            }
+        }
+    }
+
+    @Override
+    public void deleteMember(long guildId, long userId) {
+        synchronized (this.connection) {
+            try {
+                this.connection.setAutoCommit(false);
+                try {
+                    for (String sql : new String[] {DELETE_MEMBER_DAYS_SQL, DELETE_MEMBER_TOTAL_SQL}) {
+                        try (PreparedStatement statement = this.connection.prepareStatement(sql)) {
+                            statement.setLong(1, guildId);
+                            statement.setLong(2, userId);
+                            statement.executeUpdate();
+                        }
+                    }
+                    this.connection.commit();
+                } catch (SQLException e) {
+                    this.connection.rollback();
+                    throw e;
+                } finally {
+                    this.connection.setAutoCommit(true);
+                }
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to delete member activity", e);
             }
         }
     }

@@ -10,4 +10,6 @@ public interface ActivityRepository {
     int countAllMessages(long guildId, long userId);
 
     int deleteDaysBefore(LocalDate day);
+
+    void deleteMember(long guildId, long userId);
 }

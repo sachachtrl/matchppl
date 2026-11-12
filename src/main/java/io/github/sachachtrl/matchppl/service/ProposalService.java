@@ -118,6 +118,10 @@ public class ProposalService {
         return interrupted;
     }
 
+    public List<Proposal> openProposals(long guildId) {
+        return this.proposalRepo.findOpen().stream().filter(proposal -> proposal.guildId() == guildId).toList();
+    }
+
     public Optional<Proposal> findProposal(long proposalId) {
         return this.proposalRepo.findById(proposalId);
     }

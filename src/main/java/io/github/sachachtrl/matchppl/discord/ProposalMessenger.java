@@ -170,6 +170,14 @@ public class ProposalMessenger {
         log.info("Proposal not delivered: proposal={}, user={}, unreachable={}", proposal.id(), viewerId, unreachable);
     }
 
+    void showServerLeft(JDA jda, Proposal proposal) {
+        for (long userId : List.of(proposal.firstUserId(), proposal.secondUserId())) {
+            if (proposal.answerOf(userId).keepsMemberBusy()) {
+                this.update(jda, proposal, userId, ProposalViews.CardState.UNAVAILABLE);
+            }
+        }
+    }
+
     private void updateMembersStillWaiting(JDA jda, Proposal proposal, ProposalViews.CardState state) {
         for (long userId : List.of(proposal.firstUserId(), proposal.secondUserId())) {
             if (proposal.answerOf(userId).keepsMemberBusy()) {

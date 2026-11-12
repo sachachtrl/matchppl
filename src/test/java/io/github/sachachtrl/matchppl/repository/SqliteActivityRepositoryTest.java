@@ -66,6 +66,20 @@ class SqliteActivityRepositoryTest {
     }
 
     @Test
+    void forgettingAMemberDeletesOnlyTheirCountersOnThatGuild() {
+        this.repository.incrementMessageCount(GUILD, USER, DAY);
+        this.repository.incrementMessageCount(GUILD, OTHER_USER, DAY);
+        this.repository.incrementMessageCount(OTHER_GUILD, USER, DAY);
+
+        this.repository.deleteMember(GUILD, USER);
+
+        assertEquals(0, this.repository.countMessages(GUILD, USER, DAY, DAY));
+        assertEquals(0, this.repository.countAllMessages(GUILD, USER));
+        assertEquals(1, this.repository.countAllMessages(GUILD, OTHER_USER));
+        assertEquals(1, this.repository.countAllMessages(OTHER_GUILD, USER));
+    }
+
+    @Test
     void totalsAreSeparatedByGuildAndUser() {
         this.repository.incrementMessageCount(GUILD, USER, DAY);
         this.repository.incrementMessageCount(GUILD, USER, DAY.plusDays(1));
