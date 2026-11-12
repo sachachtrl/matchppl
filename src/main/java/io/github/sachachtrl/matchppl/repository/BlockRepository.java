@@ -11,6 +11,8 @@ public interface BlockRepository {
 
     boolean unblock(long guildId, long blockerId, long blockedId);
 
+    boolean isBlocked(long guildId, long firstUserId, long secondUserId);
+
     List<Long> findBlocked(long guildId, long blockerId);
 
     Set<UserPair> findBlockedPairs(long guildId);

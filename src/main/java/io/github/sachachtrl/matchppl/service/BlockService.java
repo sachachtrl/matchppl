@@ -48,6 +48,10 @@ public class BlockService {
         return this.blockRepo.unblock(guildId, blockerId, blockedId);
     }
 
+    public boolean isBlocked(long guildId, long firstUserId, long secondUserId) {
+        return this.blockRepo.isBlocked(guildId, firstUserId, secondUserId);
+    }
+
     public List<Long> blockedMembers(long guildId, long blockerId) {
         return this.blockRepo.findBlocked(guildId, blockerId);
     }

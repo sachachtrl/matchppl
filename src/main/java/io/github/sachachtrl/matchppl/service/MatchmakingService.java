@@ -59,7 +59,14 @@ public class MatchmakingService {
         Set<UserPair> blocked = new HashSet<>(this.proposalService.blockedPairs(guildId));
         blocked.addAll(this.blockService.blockedPairs(guildId));
         List<MatchPair> pairs = this.matchingService.findPairs(candidates, blocked);
-        return this.proposalService.createProposals(guildId, pairs, this.guildConfigService.responseDelay(guildId));
+        return this.proposalService.createProposals(guildId, pairs, this.guildConfigService.responseDelay(guildId),
+                pair -> this.stillAllowed(guildId, pair));
+    }
+
+    private boolean stillAllowed(long guildId, MatchPair pair) {
+        return !this.blockService.isBlocked(guildId, pair.firstUserId(), pair.secondUserId())
+                && this.profileService.getProfile(guildId, pair.firstUserId()).searching()
+                && this.profileService.getProfile(guildId, pair.secondUserId()).searching();
     }
 
     private List<MatchCandidate> freeCandidates(long guildId, LongFunction<Optional<MemberSnapshot>> members) {

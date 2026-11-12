@@ -87,6 +87,16 @@ class ProposalServiceTest {
     }
 
     @Test
+    void aPairRejectedByTheFinalCheckIsNotCreated() {
+        List<Proposal> created = this.service.createProposals(GUILD,
+                List.of(new MatchPair(ALICE, BOB, 1, 1), new MatchPair(CAROL, ALICE + 1, 1, 1)), DELAY,
+                pair -> pair.firstUserId() != ALICE);
+
+        assertEquals(List.of(CAROL), created.stream().map(Proposal::firstUserId).toList());
+        assertFalse(this.service.busyUsers(GUILD).contains(ALICE));
+    }
+
+    @Test
     void pairsWithABusyMemberAreNotCreated() {
         this.propose(ALICE, BOB);
 

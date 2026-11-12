@@ -102,7 +102,10 @@ class BlockServiceTest {
         this.service.block(GUILD, ALICE, BOB);
 
         assertEquals(Set.of(new UserPair(BOB, ALICE)), this.service.blockedPairs(GUILD));
+        assertTrue(this.service.isBlocked(GUILD, BOB, ALICE));
+        assertFalse(this.service.isBlocked(GUILD, BOB, CAROL));
         assertTrue(this.service.blockedPairs(OTHER_GUILD).isEmpty());
+        assertFalse(this.service.isBlocked(OTHER_GUILD, ALICE, BOB));
     }
 
     @Test

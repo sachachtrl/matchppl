@@ -22,6 +22,10 @@ public class SqliteBlockRepository implements BlockRepository {
     private static final String FIND_BLOCKED_SQL = """
             SELECT blocked_id FROM member_block WHERE guild_id = ? AND blocker_id = ? ORDER BY created_at
             """;
+    private static final String IS_BLOCKED_SQL = """
+            SELECT 1 FROM member_block
+            WHERE guild_id = ? AND ((blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?))
+            """;
     private static final String FIND_PAIRS_SQL = """
             SELECT blocker_id, blocked_id FROM member_block WHERE guild_id = ?
             """;
@@ -60,6 +64,24 @@ public class SqliteBlockRepository implements BlockRepository {
                 return statement.executeUpdate() > 0;
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to unblock member", e);
+            }
+        }
+    }
+
+    @Override
+    public boolean isBlocked(long guildId, long firstUserId, long secondUserId) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(IS_BLOCKED_SQL)) {
+                statement.setLong(1, guildId);
+                statement.setLong(2, firstUserId);
+                statement.setLong(3, secondUserId);
+                statement.setLong(4, secondUserId);
+                statement.setLong(5, firstUserId);
+                try (ResultSet result = statement.executeQuery()) {
+                    return result.next();
+                }
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to check member block", e);
             }
         }
     }

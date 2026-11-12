@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class ProposalService {
     public enum Action {
@@ -49,12 +50,17 @@ public class ProposalService {
         this.clock = clock;
     }
 
-    public synchronized List<Proposal> createProposals(long guildId, List<MatchPair> pairs, Duration responseDelay) {
+    public List<Proposal> createProposals(long guildId, List<MatchPair> pairs, Duration responseDelay) {
+        return this.createProposals(guildId, pairs, responseDelay, pair -> true);
+    }
+
+    public synchronized List<Proposal> createProposals(long guildId, List<MatchPair> pairs, Duration responseDelay,
+            Predicate<MatchPair> stillAllowed) {
         Instant now = this.clock.instant();
         List<Proposal> created = new ArrayList<>();
         Set<Long> busy = this.busyUsers(guildId);
         for (MatchPair pair : pairs) {
-            if (busy.contains(pair.firstUserId()) || busy.contains(pair.secondUserId())) {
+            if (busy.contains(pair.firstUserId()) || busy.contains(pair.secondUserId()) || !stillAllowed.test(pair)) {
                 continue;
             }
             created.add(this.proposalRepo.create(guildId, pair.firstUserId(), pair.secondUserId(), now,
@@ -118,7 +124,7 @@ public class ProposalService {
         return interrupted;
     }
 
-    public List<Proposal> openProposals(long guildId) {
+    public synchronized List<Proposal> openProposals(long guildId) {
         return this.proposalRepo.findOpen().stream().filter(proposal -> proposal.guildId() == guildId).toList();
     }
 
