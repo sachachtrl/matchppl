@@ -251,14 +251,15 @@ public class ConfigListener extends ListenerAdapter {
 
     private static ConfigViews.Warnings warnings(Guild guild, GuildSettings settings) {
         Member self = guild.getSelfMember();
-        boolean roomsBlocked = !self.hasPermission(Permission.MANAGE_CHANNEL, Permission.MANAGE_ROLES);
+        boolean missingManageChannels = !self.hasPermission(Permission.MANAGE_CHANNEL);
+        boolean missingManageRoles = !self.hasPermission(Permission.MANAGE_ROLES);
         boolean logChannelBlocked = false;
         if (settings.logChannelId() != null) {
             GuildMessageChannel channel = guild.getChannelById(GuildMessageChannel.class, settings.logChannelId());
             logChannelBlocked = channel == null
                     || !self.hasPermission(channel, Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND);
         }
-        return new ConfigViews.Warnings(roomsBlocked, logChannelBlocked);
+        return new ConfigViews.Warnings(missingManageChannels, missingManageRoles, logChannelBlocked);
     }
 
     private void refresh(IMessageEditCallback event, Guild guild, Locale locale) {

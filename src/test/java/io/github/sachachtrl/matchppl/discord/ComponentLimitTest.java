@@ -24,7 +24,7 @@ class ComponentLimitTest {
     @Test
     void theConfigCardStaysUnderTheLimitWithEveryWarning() {
         GuildSettings settings = GuildSettings.defaults(1L).withLogChannelId(2L).withCategoryId(3L);
-        Container card = ConfigViews.card(settings, 5, new ConfigViews.Warnings(true, true),
+        Container card = ConfigViews.card(settings, 5, new ConfigViews.Warnings(true, true, true),
                 Messages.DEFAULT_LOCALE);
 
         long count = count(card);

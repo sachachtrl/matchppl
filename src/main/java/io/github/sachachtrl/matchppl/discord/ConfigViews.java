@@ -34,7 +34,7 @@ final class ConfigViews {
     static final String BACK = PREFIX + "back";
     static final String LANGUAGE = PREFIX + "language";
 
-    record Warnings(boolean roomsBlocked, boolean logChannelBlocked) {}
+    record Warnings(boolean missingManageChannels, boolean missingManageRoles, boolean logChannelBlocked) {}
 
     private ConfigViews() {
     }
@@ -54,8 +54,9 @@ final class ConfigViews {
         children.add(Separator.createDivider(Separator.Spacing.LARGE));
         children.add(TextDisplay.of("### " + Messages.get(locale, "config.section.channels")));
         children.add(roomsSection(settings.roomsEnabled(), locale));
-        if (settings.roomsEnabled() && warnings.roomsBlocked()) {
-            children.add(TextDisplay.of(Messages.get(locale, "config.warning.rooms")));
+        String roomsWarning = roomsWarning(warnings, locale);
+        if (settings.roomsEnabled() && roomsWarning != null) {
+            children.add(TextDisplay.of(roomsWarning));
         }
         children.add(editSection(ROOM_LIFETIME, "config.room_lifetime", settings.roomLifetime(), locale));
         children.add(Section.of(
@@ -121,6 +122,21 @@ final class ConfigViews {
     private static String languageName(Locale language) {
         String name = language.getDisplayLanguage(language);
         return name.substring(0, 1).toUpperCase(language) + name.substring(1);
+    }
+
+    static String roomsWarning(Warnings warnings, Locale locale) {
+        List<String> missing = new ArrayList<>();
+        if (warnings.missingManageChannels()) {
+            missing.add(Messages.get(locale, "permission.manage_channels"));
+        }
+        if (warnings.missingManageRoles()) {
+            missing.add(Messages.get(locale, "permission.manage_roles"));
+        }
+        return switch (missing.size()) {
+            case 0 -> null;
+            case 1 -> Messages.format(locale, "config.warning.rooms.one", missing.getFirst());
+            default -> Messages.format(locale, "config.warning.rooms.both", missing.get(0), missing.get(1));
+        };
     }
 
     private static String countText(Locale locale, String keyPrefix, int count) {
