@@ -59,9 +59,10 @@ public class ReportListener extends ListenerAdapter {
         if (!id.startsWith(RoomViews.REPORT_PREFIX)) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
         String target = id.substring(RoomViews.REPORT_PREFIX.length());
-        if (this.find(target, event.getUser().getIdLong(), locale).isEmpty()) {
+        Optional<Report> report = this.find(target, event.getUser().getIdLong());
+        Locale locale = this.languageOf(report);
+        if (report.isEmpty()) {
             this.replyCard(event, Cards.simple(Cards.ERROR_COLOR, Messages.get(locale, "error.title"),
                     Messages.get(locale, "room.unavailable")));
             return;
@@ -83,9 +84,9 @@ public class ReportListener extends ListenerAdapter {
         if (!modalId.startsWith(MODAL_PREFIX)) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
         long reporterId = event.getUser().getIdLong();
-        Optional<Report> report = this.find(modalId.substring(MODAL_PREFIX.length()), reporterId, locale);
+        Optional<Report> report = this.find(modalId.substring(MODAL_PREFIX.length()), reporterId);
+        Locale locale = this.languageOf(report);
         Guild guild = report.map(found -> event.getJDA().getGuildById(found.guildId())).orElse(null);
         ModalMapping value = event.getValue(REASON_INPUT);
         if (report.isEmpty() || guild == null || value == null) {
@@ -106,7 +107,7 @@ public class ReportListener extends ListenerAdapter {
         });
     }
 
-    private Optional<Report> find(String target, long userId, Locale locale) {
+    private Optional<Report> find(String target, long userId) {
         String[] parts = target.split(":");
         if (parts.length != 2) {
             return Optional.empty();
@@ -115,27 +116,34 @@ public class ReportListener extends ListenerAdapter {
         return switch (parts[0]) {
             case RoomViews.REPORT_ROOM -> this.roomService.findRoom(id)
                     .filter(room -> room.involves(userId))
-                    .map(room -> new Report(room.guildId(), room.otherUserId(userId), this.roomContext(room, locale)));
+                    .map(room -> new Report(room.guildId(), room.otherUserId(userId), this.roomContext(room)));
             case RoomViews.REPORT_PROPOSAL -> this.proposalService.findProposal(id)
                     .filter(proposal -> proposal.involves(userId) && proposal.status() == ProposalStatus.MATCHED)
                     .map(proposal -> new Report(proposal.guildId(), proposal.otherUserId(userId),
-                            this.proposalContext(proposal, locale)));
+                            this.proposalContext(proposal)));
             default -> Optional.empty();
         };
     }
 
-    private String roomContext(Room room, Locale locale) {
+    private Locale languageOf(Optional<Report> report) {
+        return report.map(found -> this.guildConfigService.language(found.guildId()))
+                .orElse(Messages.DEFAULT_LOCALE);
+    }
+
+    private String roomContext(Room room) {
+        Locale locale = this.guildConfigService.language(room.guildId());
         String name = this.guildConfigService.settings(room.guildId()).roomPrefix() + " #" + room.number();
         String channel = room.textChannelId() == null ? "" : " (<#" + room.textChannelId() + ">)";
         return Messages.format(locale, "report.log.room", "**" + name + "**" + channel);
     }
 
-    private String proposalContext(Proposal proposal, Locale locale) {
+    private String proposalContext(Proposal proposal) {
         Optional<Room> room = this.roomService.findByProposal(proposal.id())
                 .filter(found -> found.textChannelId() != null);
         return room.isPresent()
-                ? this.roomContext(room.get(), locale)
-                : Messages.format(locale, "report.log.direct", "<t:" + proposal.createdAt().getEpochSecond() + ":f>");
+                ? this.roomContext(room.get())
+                : Messages.format(this.guildConfigService.language(proposal.guildId()), "report.log.direct",
+                        "<t:" + proposal.createdAt().getEpochSecond() + ":f>");
     }
 
     private void deliver(Guild guild, long reporterId, Report report, String reason, Locale locale,

@@ -5,6 +5,8 @@ import io.github.sachachtrl.matchppl.repository.GuildConfigRepository;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 
@@ -16,6 +18,7 @@ public class GuildConfigService {
     public static final Duration MIN_ROOM_LIFETIME = Duration.ofMinutes(10);
     public static final Duration MAX_ROOM_LIFETIME = Duration.ofDays(30);
     public static final int MAX_ROOM_PREFIX_LENGTH = 40;
+    public static final List<Locale> SUPPORTED_LANGUAGES = List.of(Locale.ENGLISH, Locale.FRENCH);
 
     private final GuildConfigRepository guildConfigRepo;
 
@@ -57,6 +60,15 @@ public class GuildConfigService {
 
     public Duration roomLifetime(long guildId) {
         return this.settings(guildId).roomLifetime();
+    }
+
+    public Locale language(long guildId) {
+        return this.settings(guildId).language();
+    }
+
+    public boolean setLanguage(long guildId, Locale language) {
+        return SUPPORTED_LANGUAGES.contains(language)
+                && this.update(guildId, settings -> settings.withLanguage(language));
     }
 
     public boolean setResponseDelay(long guildId, Duration delay) {

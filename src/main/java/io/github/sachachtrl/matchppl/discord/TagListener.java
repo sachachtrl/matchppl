@@ -75,7 +75,7 @@ public class TagListener extends ListenerAdapter {
                 || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.isAdmin(member)) {
             this.replyError(event, Messages.get(locale, "error.title"), Messages.get(locale, "error.admin_required"));
             return;
@@ -112,7 +112,7 @@ public class TagListener extends ListenerAdapter {
         if (target == null || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.isAdmin(member)) {
             this.replyError(event, Messages.get(locale, "error.title"), Messages.get(locale, "error.admin_required"));
             return;
@@ -168,7 +168,7 @@ public class TagListener extends ListenerAdapter {
         if (target == null || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.isAdmin(member)) {
             this.replyError(event, Messages.get(locale, "error.title"), Messages.get(locale, "error.admin_required"));
             return;
@@ -203,7 +203,7 @@ public class TagListener extends ListenerAdapter {
         if (target == null || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.isAdmin(member)) {
             this.replyError(event, Messages.get(locale, "error.title"), Messages.get(locale, "error.admin_required"));
             return;

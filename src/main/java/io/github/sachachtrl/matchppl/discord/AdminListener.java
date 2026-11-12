@@ -69,7 +69,7 @@ public class AdminListener extends ListenerAdapter {
                 && !commandName.equals(LIST_ADMIN_COMMAND)) || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.canManage(event, member, locale)) {
             return;
         }
@@ -116,7 +116,7 @@ public class AdminListener extends ListenerAdapter {
         if (!id.startsWith(AdminViews.REMOVE_PREFIX) || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.canManage(event, member, locale)) {
             return;
         }
@@ -145,7 +145,7 @@ public class AdminListener extends ListenerAdapter {
         if (!event.getComponentId().equals(AdminViews.ADD) || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.canManage(event, member, locale)) {
             return;
         }

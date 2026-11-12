@@ -64,7 +64,7 @@ public class ResetListener extends ListenerAdapter {
                 || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.checkAdmin(event, member, locale)) {
             return;
         }
@@ -89,7 +89,7 @@ public class ResetListener extends ListenerAdapter {
         if (!id.startsWith(PREFIX) || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.checkAdmin(event, member, locale)) {
             return;
         }

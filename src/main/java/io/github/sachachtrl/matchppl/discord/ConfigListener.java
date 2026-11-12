@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.EntitySelectInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.InteractionContextType;
 import net.dv8tion.jda.api.interactions.callbacks.IMessageEditCallback;
@@ -57,7 +58,7 @@ public class ConfigListener extends ListenerAdapter {
         if (!event.getName().equals(COMMAND_NAME) || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.checkAdmin(event, member, locale)) {
             return;
         }
@@ -72,7 +73,7 @@ public class ConfigListener extends ListenerAdapter {
         if (!id.startsWith(ConfigViews.PREFIX) || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.checkAdmin(event, member, locale)) {
             return;
         }
@@ -112,7 +113,7 @@ public class ConfigListener extends ListenerAdapter {
         if (!id.startsWith(ConfigViews.PREFIX) || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.checkAdmin(event, member, locale)) {
             return;
         }
@@ -130,6 +131,23 @@ public class ConfigListener extends ListenerAdapter {
     }
 
     @Override
+    public void onStringSelectInteraction(StringSelectInteractionEvent event) {
+        Guild guild = event.getGuild();
+        Member member = event.getMember();
+        if (!event.getComponentId().equals(ConfigViews.LANGUAGE) || guild == null || member == null) {
+            return;
+        }
+        if (!this.checkAdmin(event, member, this.guildConfigService.language(guild.getIdLong()))) {
+            return;
+        }
+        String tag = event.getValues().getFirst();
+        if (this.guildConfigService.setLanguage(guild.getIdLong(), Locale.forLanguageTag(tag))) {
+            this.logChange(guild, member, "language", tag);
+        }
+        this.refresh(event, guild, this.guildConfigService.language(guild.getIdLong()));
+    }
+
+    @Override
     public void onModalInteraction(ModalInteractionEvent event) {
         String modalId = event.getModalId();
         Guild guild = event.getGuild();
@@ -137,7 +155,7 @@ public class ConfigListener extends ListenerAdapter {
         if (!modalId.startsWith(MODAL_PREFIX) || guild == null || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(guild.getIdLong());
         if (!this.checkAdmin(event, member, locale)) {
             return;
         }

@@ -110,7 +110,7 @@ public class Main {
 
         ProfileRepository profileRepo = new SqliteProfileRepository(database, cipher);
         ProfileService profileService = new ProfileService(profileRepo, tagService, clock);
-        MatchListener matchListener = new MatchListener(profileService, tagService);
+        MatchListener matchListener = new MatchListener(profileService, tagService, guildConfigService);
         ConfigListener configListener = new ConfigListener(guildConfigService, profileService);
 
         ProposalRepository proposalRepo = new SqliteProposalRepository(database);
@@ -121,10 +121,10 @@ public class Main {
         MatchmakingService matchmakingService = new MatchmakingService(profileService, tagService, matchingService,
                 proposalService, guildConfigService, clock);
         ProposalMessenger messenger = new ProposalMessenger(proposalService, profileService, tagService,
-                roomService);
+                roomService, guildConfigService);
         RoomManager roomManager = new RoomManager(roomService, proposalService, guildConfigService, messenger);
         ProposalListener proposalListener = new ProposalListener(proposalService, messenger, roomManager);
-        RoomListener roomListener = new RoomListener(roomService, roomManager);
+        RoomListener roomListener = new RoomListener(roomService, roomManager, guildConfigService);
         ReportListener reportListener = new ReportListener(roomService, proposalService, guildConfigService);
         MemberListener memberListener = new MemberListener(profileService, proposalService, roomService, messenger,
                 roomManager);

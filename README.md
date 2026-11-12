@@ -37,12 +37,13 @@ What the matching is *for* is up to each server — finding teammates, planning 
 - **`/config`** — server settings for admins in a single card: response delay, matching frequency, private channels on or off, channel lifetime, name prefix, category and log channel. It can also turn off every member's search at once, behind a clear confirmation.
 - **Crash recovery** — every deadline is stored as an absolute UTC instant, so expired proposals and channels are caught up automatically after a restart. A heartbeat written every minute also detects downtime longer than five minutes: proposals that were in progress are then interrupted (members' cards say so, and it does not count as a refusal), while a *Skip* already given still counts.
 - **Activity tracking** — daily message counts per member, used later for tag access conditions. The bot never reads message content.
-- **Translatable interface** — every user-facing text lives in resource bundles, with English as the default language.
+- **English and French** — admins choose the server's language in `/config`; every card, direct message and channel message follows it. Texts live in resource bundles, and a test checks that every translation has the same keys and placeholders as the English one.
 - **Modern message layout** — replies use Discord's Components V2: cards with sections, separators and inline buttons.
 
 ### Planned
 
-- **Language setting** — a server-wide language option in `/config`, as soon as a first translation is available.
+- **Tag pagination** — tag menus are limited to 25 options by Discord; servers with more tags will get pages or a search.
+- **Activity retention** — daily message counts will be purged after 30 days, with an all-time total kept separately.
 
 ## Tech stack
 

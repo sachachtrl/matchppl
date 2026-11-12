@@ -4,6 +4,7 @@ import io.github.sachachtrl.matchppl.model.Profile;
 import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.model.ProposalStatus;
 import io.github.sachachtrl.matchppl.model.Room;
+import io.github.sachachtrl.matchppl.service.GuildConfigService;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 import io.github.sachachtrl.matchppl.service.ProposalService;
 import io.github.sachachtrl.matchppl.service.RoomService;
@@ -29,13 +30,15 @@ public class ProposalMessenger {
     private final ProfileService profileService;
     private final TagService tagService;
     private final RoomService roomService;
+    private final GuildConfigService guildConfigService;
 
     public ProposalMessenger(ProposalService proposalService, ProfileService profileService, TagService tagService,
-            RoomService roomService) {
+            RoomService roomService, GuildConfigService guildConfigService) {
         this.proposalService = proposalService;
         this.profileService = profileService;
         this.tagService = tagService;
         this.roomService = roomService;
+        this.guildConfigService = guildConfigService;
     }
 
     public void deliver(JDA jda, Proposal proposal) {
@@ -92,7 +95,7 @@ public class ProposalMessenger {
     }
 
     Container render(JDA jda, Proposal proposal, long viewerId, ProposalViews.CardState state) {
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(proposal.guildId());
         long guildId = proposal.guildId();
         long otherId = proposal.otherUserId(viewerId);
         Guild guild = jda.getGuildById(guildId);

@@ -147,6 +147,7 @@ public class Database implements AutoCloseable {
         this.addColumnIfMissing("profile", "waiting_since", "TEXT");
         this.addColumnIfMissing("profile", "dm_unreachable", "INTEGER NOT NULL DEFAULT 0");
         this.addColumnIfMissing("profile", "allow_rooms", "INTEGER NOT NULL DEFAULT 1");
+        this.addColumnIfMissing("guild_settings", "language", "TEXT NOT NULL DEFAULT 'en'");
         this.addColumnIfMissing("proposal", "unblocked", "INTEGER NOT NULL DEFAULT 0");
     }
 

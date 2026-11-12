@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 public class SqliteGuildConfigRepository implements GuildConfigRepository {
@@ -25,14 +26,14 @@ public class SqliteGuildConfigRepository implements GuildConfigRepository {
             """;
     private static final String FIND_SETTINGS_SQL = """
             SELECT response_delay_minutes, matching_interval_minutes, rooms_enabled, room_lifetime_minutes,
-                   room_prefix, category_id, log_channel_id
+                   room_prefix, category_id, log_channel_id, language
             FROM guild_settings
             WHERE guild_id = ?
             """;
     private static final String SAVE_SETTINGS_SQL = """
             INSERT INTO guild_settings (guild_id, response_delay_minutes, matching_interval_minutes, rooms_enabled,
-                                        room_lifetime_minutes, room_prefix, category_id, log_channel_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                        room_lifetime_minutes, room_prefix, category_id, log_channel_id, language)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (guild_id) DO UPDATE SET
                 response_delay_minutes = excluded.response_delay_minutes,
                 matching_interval_minutes = excluded.matching_interval_minutes,
@@ -40,7 +41,8 @@ public class SqliteGuildConfigRepository implements GuildConfigRepository {
                 room_lifetime_minutes = excluded.room_lifetime_minutes,
                 room_prefix = excluded.room_prefix,
                 category_id = excluded.category_id,
-                log_channel_id = excluded.log_channel_id
+                log_channel_id = excluded.log_channel_id,
+                language = excluded.language
             """;
 
     private final Connection connection;
@@ -66,7 +68,8 @@ public class SqliteGuildConfigRepository implements GuildConfigRepository {
                             Duration.ofMinutes(result.getLong(4)),
                             result.getString(5),
                             getNullableLong(result, 6),
-                            getNullableLong(result, 7));
+                            getNullableLong(result, 7),
+                            Locale.forLanguageTag(result.getString(8)));
                 }
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to read guild settings", e);
@@ -86,6 +89,7 @@ public class SqliteGuildConfigRepository implements GuildConfigRepository {
                 statement.setString(6, settings.roomPrefix());
                 setNullableLong(statement, 7, settings.categoryId());
                 setNullableLong(statement, 8, settings.logChannelId());
+                statement.setString(9, settings.language().toLanguageTag());
                 statement.executeUpdate();
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to save guild settings", e);

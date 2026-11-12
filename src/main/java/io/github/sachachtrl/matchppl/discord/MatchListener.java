@@ -2,6 +2,7 @@ package io.github.sachachtrl.matchppl.discord;
 
 import io.github.sachachtrl.matchppl.model.MemberConditions;
 import io.github.sachachtrl.matchppl.model.Profile;
+import io.github.sachachtrl.matchppl.service.GuildConfigService;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 import io.github.sachachtrl.matchppl.service.TagService;
 
@@ -46,10 +47,13 @@ public class MatchListener extends ListenerAdapter {
 
     private final ProfileService profileService;
     private final TagService tagService;
+    private final GuildConfigService guildConfigService;
 
-    public MatchListener(ProfileService profileService, TagService tagService) {
+    public MatchListener(ProfileService profileService, TagService tagService,
+            GuildConfigService guildConfigService) {
         this.profileService = profileService;
         this.tagService = tagService;
+        this.guildConfigService = guildConfigService;
     }
 
     public static SlashCommandData command() {
@@ -63,7 +67,7 @@ public class MatchListener extends ListenerAdapter {
         if (!event.getName().equals(COMMAND_NAME) || member == null) {
             return;
         }
-        event.replyComponents(this.mainView(member, Messages.DEFAULT_LOCALE))
+        event.replyComponents(this.mainView(member, this.guildConfigService.language(member.getGuild().getIdLong())))
                 .useComponentsV2()
                 .setEphemeral(true)
                 .queue();
@@ -76,7 +80,7 @@ public class MatchListener extends ListenerAdapter {
         if (!id.startsWith(ProfileViews.PREFIX) || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(member.getGuild().getIdLong());
         long guildId = member.getGuild().getIdLong();
         long userId = member.getIdLong();
         switch (id) {
@@ -122,7 +126,7 @@ public class MatchListener extends ListenerAdapter {
         if (!id.startsWith(ProfileViews.PREFIX) || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(member.getGuild().getIdLong());
         long guildId = member.getGuild().getIdLong();
         long userId = member.getIdLong();
         if (id.equals(ProfileViews.MIN_COMMON_TAGS)) {
@@ -156,7 +160,7 @@ public class MatchListener extends ListenerAdapter {
         if (!id.startsWith(MODAL_PREFIX) || member == null) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(member.getGuild().getIdLong());
         long guildId = member.getGuild().getIdLong();
         long userId = member.getIdLong();
         switch (id) {

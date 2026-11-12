@@ -1,6 +1,7 @@
 package io.github.sachachtrl.matchppl.discord;
 
 import io.github.sachachtrl.matchppl.model.GuildSettings;
+import io.github.sachachtrl.matchppl.service.GuildConfigService;
 
 import java.time.Duration;
 import java.util.Locale;
@@ -9,6 +10,8 @@ import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.section.Section;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
+import net.dv8tion.jda.api.components.selections.SelectOption;
+import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.separator.Separator;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
@@ -26,6 +29,7 @@ final class ConfigViews {
     static final String STOP_ALL = PREFIX + "stopall";
     static final String STOP_ALL_CONFIRM = PREFIX + "stopall:confirm";
     static final String BACK = PREFIX + "back";
+    static final String LANGUAGE = PREFIX + "language";
 
     private ConfigViews() {
     }
@@ -34,6 +38,10 @@ final class ConfigViews {
         return Container.of(
                 TextDisplay.of("## " + Messages.get(locale, "config.title") + "\n-# "
                         + Messages.get(locale, "config.subtitle")),
+                Separator.createDivider(Separator.Spacing.LARGE),
+                TextDisplay.of("**" + Messages.get(locale, "config.language.title") + "**\n-# "
+                        + Messages.get(locale, "config.language.hint")),
+                ActionRow.of(languageSelect(settings.language())),
                 Separator.createDivider(Separator.Spacing.LARGE),
                 TextDisplay.of("### " + Messages.get(locale, "config.section.proposals")),
                 editSection(RESPONSE_DELAY, "config.response_delay", settings.responseDelay(), locale),
@@ -87,6 +95,21 @@ final class ConfigViews {
                 Separator.createDivider(Separator.Spacing.LARGE),
                 ActionRow.of(Button.secondary(BACK, Messages.get(locale, "config.button.back")))
         ).withAccentColor(Cards.SUCCESS_COLOR);
+    }
+
+    private static StringSelectMenu languageSelect(Locale selected) {
+        return StringSelectMenu.create(LANGUAGE)
+                .addOptions(GuildConfigService.SUPPORTED_LANGUAGES.stream()
+                        .map(language -> SelectOption.of(languageName(language), language.toLanguageTag())
+                                .withDefault(language.equals(selected)))
+                        .toList())
+                .setRequiredRange(1, 1)
+                .build();
+    }
+
+    private static String languageName(Locale language) {
+        String name = language.getDisplayLanguage(language);
+        return name.substring(0, 1).toUpperCase(language) + name.substring(1);
     }
 
     private static String countText(Locale locale, String keyPrefix, int count) {

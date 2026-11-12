@@ -1,6 +1,7 @@
 package io.github.sachachtrl.matchppl.discord;
 
 import io.github.sachachtrl.matchppl.model.Room;
+import io.github.sachachtrl.matchppl.service.GuildConfigService;
 import io.github.sachachtrl.matchppl.service.RoomService;
 
 import java.util.Locale;
@@ -18,10 +19,12 @@ public class RoomListener extends ListenerAdapter {
 
     private final RoomService roomService;
     private final RoomManager roomManager;
+    private final GuildConfigService guildConfigService;
 
-    public RoomListener(RoomService roomService, RoomManager roomManager) {
+    public RoomListener(RoomService roomService, RoomManager roomManager, GuildConfigService guildConfigService) {
         this.roomService = roomService;
         this.roomManager = roomManager;
+        this.guildConfigService = guildConfigService;
     }
 
     @Override
@@ -30,7 +33,9 @@ public class RoomListener extends ListenerAdapter {
         if (!id.startsWith(RoomViews.PREFIX)) {
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = event.getGuild() == null
+                ? Messages.DEFAULT_LOCALE
+                : this.guildConfigService.language(event.getGuild().getIdLong());
         if (id.equals(RoomViews.END_KEEP)) {
             event.editComponents(Container.of(TextDisplay.of(Messages.get(locale, "room.end.kept")))
                             .withAccentColor(Cards.MUTED_COLOR))

@@ -80,7 +80,7 @@ public class RoomManager {
                 ? null
                 : guild.getTextChannelById(room.textChannelId());
         if (channel != null) {
-            channel.sendMessageComponents(RoomViews.reminder(room, Messages.DEFAULT_LOCALE))
+            channel.sendMessageComponents(RoomViews.reminder(room, this.guildConfigService.language(room.guildId())))
                     .useComponentsV2()
                     .queue(message -> {
                     }, error -> log.warn("Cannot send room reminder: room={}", room.id()));
@@ -114,7 +114,7 @@ public class RoomManager {
             this.remove(jda, current);
             return;
         }
-        Locale locale = Messages.DEFAULT_LOCALE;
+        Locale locale = this.guildConfigService.language(room.guildId());
         text.sendMessageComponents(RoomViews.welcome(current, voiceChannelId, locale))
                 .useComponentsV2()
                 .queue(message -> {

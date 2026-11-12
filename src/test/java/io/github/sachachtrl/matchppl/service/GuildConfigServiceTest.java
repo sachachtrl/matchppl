@@ -7,6 +7,7 @@ import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,6 +111,17 @@ class GuildConfigServiceTest {
         assertEquals(GuildSettings.DEFAULT_ROOM_PREFIX, this.service.settings(GUILD).roomPrefix());
 
         assertFalse(this.service.setRoomPrefix(GUILD, "a".repeat(GuildConfigService.MAX_ROOM_PREFIX_LENGTH + 1)));
+    }
+
+    @Test
+    void onlySupportedLanguagesCanBeChosen() {
+        assertEquals(Locale.ENGLISH, this.service.language(GUILD));
+
+        assertTrue(this.service.setLanguage(GUILD, Locale.FRENCH));
+        assertFalse(this.service.setLanguage(GUILD, Locale.GERMAN));
+
+        assertEquals(Locale.FRENCH, this.service.language(GUILD));
+        assertEquals(Locale.ENGLISH, this.service.language(OTHER_GUILD));
     }
 
     @Test
