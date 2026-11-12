@@ -113,6 +113,8 @@ java -jar target/matchppl.jar
 
 The bot reads `.env` and stores `matchppl.db` in its working directory. On a Linux server, [`deploy/matchppl.service`](deploy/matchppl.service) runs it as a systemd service under a dedicated, unprivileged user, restarts it after a crash or a reboot, and sandboxes it so that it can only write to its own directory (`/opt/matchppl`). Only one instance may run with a given token at a time.
 
+[`deploy/deploy.ps1`](deploy/deploy.ps1) deploys a new version in one command: it refuses uncommitted changes, builds and tests the jar, uploads it, then [`deploy/matchppl-update.sh`](deploy/matchppl-update.sh) backs up the database, restarts the bot, waits for it to log in and rolls back to the previous jar if it does not.
+
 ### Backups
 
 Every night, [`deploy/matchppl-backup.sh`](deploy/matchppl-backup.sh), triggered by a systemd timer, takes a consistent snapshot of the database with SQLite's backup command, checks its integrity, encrypts it with [age](https://age-encryption.org/) and keeps the last 14 days on the server. The server only holds the public key: it can encrypt backups but never read them. [`deploy/pull-backups.ps1`](deploy/pull-backups.ps1) then copies them off the server over SSH, for example from the Windows Task Scheduler. Restoring a backup requires both the private age key and the `PROFILE_KEY`.
