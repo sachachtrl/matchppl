@@ -19,7 +19,6 @@ import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.components.separator.Separator;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
 
 final class ProfileViews {
     static final String PREFIX = "profile:";
@@ -264,7 +263,7 @@ final class ProfileViews {
     private static StringSelectMenu tagSelect(String id, List<Tag> shown, Set<Long> selected, String placeholder) {
         List<SelectOption> options = shown.stream()
                 .map(tag -> SelectOption.of(tag.name(), String.valueOf(tag.id()))
-                        .withEmoji(Emoji.fromFormatted(tag.emoji()))
+                        .withEmoji(TagEmojis.forMenu(tag.emoji()))
                         .withDefault(selected.contains(tag.id())))
                 .toList();
         return StringSelectMenu.create(id)

@@ -41,7 +41,6 @@ public class TagListener extends ListenerAdapter {
     private static final String VALUE_INPUT = "value";
     private static final String MESSAGES_INPUT = "messages";
     private static final String PERIOD_INPUT = "period";
-    private static final int MAX_UNICODE_EMOJI_LENGTH = 16;
 
     private record ComponentTarget(String action, long tagId) {}
 
@@ -97,7 +96,7 @@ public class TagListener extends ListenerAdapter {
             guild.retrieveEmojiById(emoji.asCustom().getIdLong()).queue(
                     found -> this.createTag(event, guild, member, name, found.getFormatted(), locale),
                     error -> this.replyInvalidEmoji(event, emojiInput, locale));
-        } else if (isPlausibleUnicodeEmoji(emojiInput.strip())) {
+        } else if (TagEmojis.isValidUnicode(emojiInput.strip())) {
             this.createTag(event, guild, member, name, emojiInput.strip(), locale);
         } else {
             this.replyInvalidEmoji(event, emojiInput, locale);
@@ -233,7 +232,8 @@ public class TagListener extends ListenerAdapter {
                         .useComponentsV2()
                         .setEphemeral(true)
                         .queue();
-                log.info("Tag created: guild={}, tag={}, by={}", guild.getIdLong(), created.tag().id(), member.getIdLong());
+                log.info("Tag created: guild={}, tag={}, by={}", guild.getIdLong(), created.tag().id(),
+                        member.getIdLong());
             }
             case TagService.NameTaken _ -> this.replyError(event, Messages.get(locale, "error.invalid_title"),
                     Messages.format(locale, "tag.error.name_taken", name.strip()));
@@ -252,13 +252,15 @@ public class TagListener extends ListenerAdapter {
 
     private Modal daysModal(Tag tag, String action, String title, String label, Integer current, Locale locale) {
         return Modal.create(MODAL_PREFIX + action + ":" + tag.id(), title)
-                .addComponents(Label.of(label, Messages.get(locale, "tag.modal.zero_hint"), ModalInputs.numberInput(VALUE_INPUT, current)))
+                .addComponents(Label.of(label, Messages.get(locale, "tag.modal.zero_hint"),
+                        ModalInputs.numberInput(VALUE_INPUT, current)))
                 .build();
     }
 
     private Modal activityModal(Tag tag, Locale locale) {
         MemberConditions conditions = tag.conditions();
-        return Modal.create(MODAL_PREFIX + TagViews.ACTIVITY + ":" + tag.id(), Messages.get(locale, "tag.activity.title"))
+        return Modal.create(MODAL_PREFIX + TagViews.ACTIVITY + ":" + tag.id(),
+                        Messages.get(locale, "tag.activity.title"))
                 .addComponents(
                         Label.of(Messages.get(locale, "tag.modal.activity.messages"),
                                 Messages.get(locale, "tag.modal.zero_hint"),
@@ -278,7 +280,8 @@ public class TagListener extends ListenerAdapter {
     }
 
     private void replyNotFound(IReplyCallback event, Locale locale) {
-        this.replyError(event, Messages.get(locale, "error.invalid_title"), Messages.get(locale, "tag.error.not_found"));
+        this.replyError(event, Messages.get(locale, "error.invalid_title"),
+                Messages.get(locale, "tag.error.not_found"));
     }
 
     private void replyError(IReplyCallback event, String title, String description) {
@@ -301,11 +304,5 @@ public class TagListener extends ListenerAdapter {
         } catch (NumberFormatException e) {
             return null;
         }
-    }
-
-    private static boolean isPlausibleUnicodeEmoji(String input) {
-        return !input.isEmpty()
-                && input.length() <= MAX_UNICODE_EMOJI_LENGTH
-                && input.codePoints().noneMatch(c -> Character.isLetterOrDigit(c) || Character.isWhitespace(c));
     }
 }
