@@ -103,6 +103,16 @@ The SQLite database (`matchppl.db`) is created automatically on first launch.
 mvn test
 ```
 
+### Deployment
+
+`mvn package` builds `target/matchppl.jar`, a single executable file that bundles every dependency:
+
+```bash
+java -jar target/matchppl.jar
+```
+
+The bot reads `.env` and stores `matchppl.db` in its working directory. On a Linux server, [`deploy/matchppl.service`](deploy/matchppl.service) runs it as a systemd service under a dedicated, unprivileged user, restarts it after a crash or a reboot, and sandboxes it so that it can only write to its own directory (`/opt/matchppl`). Only one instance may run with a given token at a time.
+
 ## Privacy
 
 - The bot requests the `GUILD_MESSAGES` intent to count messages, and the privileged `GUILD_MEMBERS` intent to check roles, server seniority and avatars when matching, and to notice when a member leaves. It also receives the server's emoji list (`GUILD_EXPRESSIONS`, not privileged) to know whether the custom emoji of a tag still exists. It does **not** use the privileged *Message Content* intent and never reads what members write.

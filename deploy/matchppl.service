@@ -1,0 +1,35 @@
+[Unit]
+Description=Match People Discord bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=matchppl
+Group=matchppl
+WorkingDirectory=/opt/matchppl
+ExecStart=/usr/bin/java -Xmx1g -jar /opt/matchppl/matchppl.jar
+Restart=on-failure
+RestartSec=10
+SuccessExitStatus=143
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/matchppl
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+RestrictNamespaces=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
