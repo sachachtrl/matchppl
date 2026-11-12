@@ -1,10 +1,12 @@
 package io.github.sachachtrl.matchppl.service;
 
+import io.github.sachachtrl.matchppl.model.ActivityPeriod;
 import io.github.sachachtrl.matchppl.repository.InMemoryActivityRepository;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -31,6 +33,20 @@ class ActivityServiceTest {
 
         LocalDate day = LocalDate.of(2026, 11, 3);
         assertEquals(1, this.repository.countMessages(GUILD, USER, day, day));
+    }
+
+    @Test
+    void thePurgeKeepsExactlyTheLastThirtyDaysAndTheAllTimeTotal() {
+        LocalDate today = LocalDate.of(2026, 11, 12);
+        for (int daysAgo : new int[] {0, 29, 30, 100}) {
+            this.service.recordMessage(GUILD, USER, today.minusDays(daysAgo).atStartOfDay().toInstant(ZoneOffset.UTC));
+        }
+
+        assertEquals(2, this.service.purgeOldDays(today));
+
+        assertEquals(2, this.service.countMessages(GUILD, USER, ActivityPeriod.THIRTY_DAYS, today));
+        assertEquals(1, this.service.countMessages(GUILD, USER, ActivityPeriod.TWO_WEEKS, today));
+        assertEquals(4, this.service.countMessages(GUILD, USER, ActivityPeriod.ALL_TIME, today));
     }
 
     @Test

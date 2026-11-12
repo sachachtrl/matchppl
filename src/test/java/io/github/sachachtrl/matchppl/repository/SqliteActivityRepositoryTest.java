@@ -54,6 +54,29 @@ class SqliteActivityRepositoryTest {
     }
 
     @Test
+    void deletingOldDaysKeepsTheRecentOnesAndTheTotal() {
+        this.repository.incrementMessageCount(GUILD, USER, DAY.minusDays(40));
+        this.repository.incrementMessageCount(GUILD, USER, DAY.minusDays(31));
+        this.repository.incrementMessageCount(GUILD, USER, DAY);
+
+        assertEquals(2, this.repository.deleteDaysBefore(DAY.minusDays(29)));
+
+        assertEquals(1, this.repository.countMessages(GUILD, USER, DAY.minusDays(100), DAY));
+        assertEquals(3, this.repository.countAllMessages(GUILD, USER));
+    }
+
+    @Test
+    void totalsAreSeparatedByGuildAndUser() {
+        this.repository.incrementMessageCount(GUILD, USER, DAY);
+        this.repository.incrementMessageCount(GUILD, USER, DAY.plusDays(1));
+        this.repository.incrementMessageCount(OTHER_GUILD, USER, DAY);
+
+        assertEquals(2, this.repository.countAllMessages(GUILD, USER));
+        assertEquals(1, this.repository.countAllMessages(OTHER_GUILD, USER));
+        assertEquals(0, this.repository.countAllMessages(GUILD, OTHER_USER));
+    }
+
+    @Test
     void countersAreSeparatedByGuildAndUser() {
         this.repository.incrementMessageCount(GUILD, USER, DAY);
         this.repository.incrementMessageCount(OTHER_GUILD, USER, DAY);

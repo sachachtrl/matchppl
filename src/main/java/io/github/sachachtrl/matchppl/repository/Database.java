@@ -2,6 +2,7 @@ package io.github.sachachtrl.matchppl.repository;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -132,7 +133,45 @@ public class Database implements AutoCloseable {
         }
     }
 
+    private void createMessageTotals() throws SQLException {
+        if (this.tableExists("message_total")) {
+            return;
+        }
+        this.connection.setAutoCommit(false);
+        try (Statement statement = this.connection.createStatement()) {
+            statement.executeUpdate("""
+                    CREATE TABLE message_total (
+                        guild_id INTEGER NOT NULL,
+                        user_id  INTEGER NOT NULL,
+                        count    INTEGER NOT NULL,
+                        PRIMARY KEY (guild_id, user_id)
+                    )
+                    """);
+            statement.executeUpdate("""
+                    INSERT INTO message_total (guild_id, user_id, count)
+                    SELECT guild_id, user_id, SUM(count) FROM message_activity GROUP BY guild_id, user_id
+                    """);
+            this.connection.commit();
+        } catch (SQLException e) {
+            this.connection.rollback();
+            throw e;
+        } finally {
+            this.connection.setAutoCommit(true);
+        }
+    }
+
+    private boolean tableExists(String table) throws SQLException {
+        try (PreparedStatement statement = this.connection.prepareStatement(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")) {
+            statement.setString(1, table);
+            try (ResultSet result = statement.executeQuery()) {
+                return result.next();
+            }
+        }
+    }
+
     private void migrateSchema() throws SQLException {
+        this.createMessageTotals();
         this.addColumnIfMissing("profile", "presentation", "TEXT");
         this.addColumnIfMissing("profile", "anonymous", "INTEGER NOT NULL DEFAULT 0");
         this.addColumnIfMissing("profile", "min_compatibility", "INTEGER");

@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 
 public class ActivityService {
-    private static final LocalDate DISCORD_EPOCH = LocalDate.of(2015, 1, 1);
+    public static final int RETENTION_DAYS = 30;
 
     private final ActivityRepository activityRepo;
 
@@ -21,11 +21,18 @@ public class ActivityService {
     }
 
     public int countMessages(long guildId, long userId, ActivityPeriod period, LocalDate today) {
-        LocalDate from = switch (period) {
-            case TWO_WEEKS -> today.minusDays(13);
-            case THIRTY_DAYS -> today.minusDays(29);
-            case ALL_TIME -> DISCORD_EPOCH;
+        return switch (period) {
+            case TWO_WEEKS -> this.activityRepo.countMessages(guildId, userId, today.minusDays(13), today);
+            case THIRTY_DAYS -> this.activityRepo.countMessages(guildId, userId, firstKeptDay(today), today);
+            case ALL_TIME -> this.activityRepo.countAllMessages(guildId, userId);
         };
-        return this.activityRepo.countMessages(guildId, userId, from, today);
+    }
+
+    public int purgeOldDays(LocalDate today) {
+        return this.activityRepo.deleteDaysBefore(firstKeptDay(today));
+    }
+
+    private static LocalDate firstKeptDay(LocalDate today) {
+        return today.minusDays(RETENTION_DAYS - 1);
     }
 }

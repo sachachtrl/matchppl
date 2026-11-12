@@ -31,6 +31,7 @@ import io.github.sachachtrl.matchppl.repository.SqliteRoomRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteTagRepository;
 import io.github.sachachtrl.matchppl.repository.TagRepository;
 import io.github.sachachtrl.matchppl.repository.TextCipher;
+import io.github.sachachtrl.matchppl.scheduler.ActivityPurgeTask;
 import io.github.sachachtrl.matchppl.scheduler.MatchmakingTask;
 import io.github.sachachtrl.matchppl.service.ActivityService;
 import io.github.sachachtrl.matchppl.service.ConditionChecker;
@@ -70,6 +71,7 @@ public class Main {
     private static final Duration SHUTDOWN_TIMEOUT = Duration.ofSeconds(10);
     private static final long FIRST_ROUND_DELAY_SECONDS = 10;
     private static final long ROUND_PERIOD_SECONDS = 60;
+    private static final long PURGE_PERIOD_HOURS = 24;
 
     public void main() throws InterruptedException {
         Dotenv env = Dotenv.configure().ignoreIfMissing().load();
@@ -164,6 +166,8 @@ public class Main {
             scheduler.scheduleAtFixedRate(new MatchmakingTask(bot, proposalService, matchmakingService, roomService,
                             messenger, roomManager, heartbeatService),
                     FIRST_ROUND_DELAY_SECONDS, ROUND_PERIOD_SECONDS, TimeUnit.SECONDS);
+            scheduler.scheduleAtFixedRate(new ActivityPurgeTask(activityService, clock), 0, PURGE_PERIOD_HOURS,
+                    TimeUnit.HOURS);
             log.info("Bot is logged in as {}", bot.getSelfUser().getAsTag());
         } catch (InvalidTokenException e) {
             log.error("Invalid token: {}", e.getMessage());

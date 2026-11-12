@@ -36,13 +36,13 @@ What the matching is *for* is up to each server — finding teammates, planning 
 - **Reports** — every channel and every match without a channel has a *Report a problem* button. Reports go to the server's log channel, mentioning the bot's admin roles, or by direct message to members with the *Manage Server* permission when no log channel is set. The other member is never told.
 - **`/config`** — server settings for admins in a single card: response delay, matching frequency, private channels on or off, channel lifetime, name prefix, category and log channel. It can also turn off every member's search at once, behind a clear confirmation.
 - **Crash recovery** — every deadline is stored as an absolute UTC instant, so expired proposals and channels are caught up automatically after a restart. A heartbeat written every minute also detects downtime longer than five minutes: proposals that were in progress are then interrupted (members' cards say so, and it does not count as a refusal), while a *Skip* already given still counts.
-- **Activity tracking** — daily message counts per member, used later for tag access conditions. The bot never reads message content.
+- **Activity tracking** — message counts per member, used by tag access conditions and the conditions members set on each other: daily counts for the last 30 days (purged every day) and an all-time total. The bot never reads message content.
 - **English and French** — admins choose the server's language in `/config`; every card, direct message and channel message follows it. Texts live in resource bundles, and a test checks that every translation has the same keys and placeholders as the English one.
 - **Modern message layout** — replies use Discord's Components V2: cards with sections, separators and inline buttons.
 
 ### Planned
 
-- **Activity retention** — daily message counts will be purged after 30 days, with an all-time total kept separately.
+- **Profile photos** — uploading a picture in `/match`, stored securely by the bot (Discord attachment links expire), once a safe hosting setup is in place.
 
 ## Tech stack
 
@@ -109,6 +109,7 @@ mvn test
 - Member introductions are **encrypted at rest** with AES-256-GCM. The key lives outside the database, so a leaked database file alone reveals none of them.
 - Excluded tags are private: the other person is never told why they were not proposed.
 - Reports are only sent to the server's admins and are not stored by the bot.
+- Message activity is reduced to numbers: daily counts are kept for 30 days only, next to a single all-time total per member.
 - The bot stores no images.
 
 ## License
