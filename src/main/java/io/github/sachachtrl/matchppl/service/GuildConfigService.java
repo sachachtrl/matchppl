@@ -107,7 +107,7 @@ public class GuildConfigService {
         this.update(guildId, settings -> settings.withLogChannelId(channelId));
     }
 
-    private boolean update(long guildId, UnaryOperator<GuildSettings> change) {
+    private synchronized boolean update(long guildId, UnaryOperator<GuildSettings> change) {
         this.guildConfigRepo.saveSettings(change.apply(this.settings(guildId)));
         return true;
     }

@@ -30,7 +30,7 @@ public class TagService {
         this.conditionChecker = conditionChecker;
     }
 
-    public CreateResult createTag(long guildId, String name, String emoji) {
+    public synchronized CreateResult createTag(long guildId, String name, String emoji) {
         String trimmedName = name.strip();
         if (trimmedName.isEmpty() || trimmedName.length() > MAX_NAME_LENGTH) {
             return new InvalidName();
@@ -60,7 +60,7 @@ public class TagService {
         return hasRequiredRole && !hasForbiddenRole && this.conditionChecker.meets(tag.conditions(), member);
     }
 
-    public boolean deleteTag(long guildId, long tagId) {
+    public synchronized boolean deleteTag(long guildId, long tagId) {
         return this.tagRepo.delete(guildId, tagId);
     }
 
@@ -87,7 +87,7 @@ public class TagService {
         return this.update(guildId, tagId, tag -> tag.withRoles(without(tag.requiredRoleIds(), roleIds), roleIds));
     }
 
-    private Optional<Tag> update(long guildId, long tagId, UnaryOperator<Tag> change) {
+    private synchronized Optional<Tag> update(long guildId, long tagId, UnaryOperator<Tag> change) {
         return this.tagRepo.findById(guildId, tagId)
                 .map(change)
                 .map(tag -> {
