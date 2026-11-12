@@ -34,7 +34,7 @@ public class ProfileService {
         return this.profileRepo.find(guildId, userId);
     }
 
-    public boolean setSearching(long guildId, long userId, boolean searching) {
+    public synchronized boolean setSearching(long guildId, long userId, boolean searching) {
         Profile profile = this.profileRepo.find(guildId, userId);
         if (searching && profile.tagIds().isEmpty()) {
             return false;
@@ -55,27 +55,27 @@ public class ProfileService {
         return this.profileRepo.countSearching(guildId);
     }
 
-    public int stopAllSearches(long guildId) {
+    public synchronized int stopAllSearches(long guildId) {
         return this.profileRepo.stopAllSearches(guildId);
     }
 
-    public void markUnreachable(long guildId, long userId) {
+    public synchronized void markUnreachable(long guildId, long userId) {
         Profile profile = this.profileRepo.find(guildId, userId);
         this.profileRepo.save(profile.withSearching(false, null).withDmUnreachable(true));
     }
 
-    public void deleteProfile(long guildId, long userId) {
+    public synchronized void deleteProfile(long guildId, long userId) {
         this.profileRepo.delete(guildId, userId);
     }
 
-    public void restartWaiting(long guildId, long userId) {
+    public synchronized void restartWaiting(long guildId, long userId) {
         Profile profile = this.profileRepo.find(guildId, userId);
         if (profile.searching()) {
             this.profileRepo.save(profile.withSearching(true, this.clock.instant()));
         }
     }
 
-    public boolean setPresentation(long guildId, long userId, String text) {
+    public synchronized boolean setPresentation(long guildId, long userId, String text) {
         String trimmed = text == null ? "" : text.strip();
         if (trimmed.length() > MAX_PRESENTATION_LENGTH) {
             return false;
@@ -85,7 +85,7 @@ public class ProfileService {
         return true;
     }
 
-    public Profile setTags(MemberSnapshot member, Set<Long> tagIds) {
+    public synchronized Profile setTags(MemberSnapshot member, Set<Long> tagIds) {
         Set<Long> usable = this.tagService.usableTags(member).stream().map(Tag::id).collect(Collectors.toSet());
         Set<Long> chosen = intersection(tagIds, usable);
         Profile profile = this.profileRepo.find(member.guildId(), member.userId());
@@ -93,57 +93,57 @@ public class ProfileService {
                 profile.preferences().requiredTagIds());
     }
 
-    public Profile setTags(MemberSnapshot member, Set<Long> shown, Set<Long> selected) {
+    public synchronized Profile setTags(MemberSnapshot member, Set<Long> shown, Set<Long> selected) {
         Profile profile = this.profileRepo.find(member.guildId(), member.userId());
         return this.setTags(member, replaceWithin(profile.tagIds(), shown, selected));
     }
 
-    public Profile setExcludedTags(long guildId, long userId, Set<Long> shown, Set<Long> selected) {
+    public synchronized Profile setExcludedTags(long guildId, long userId, Set<Long> shown, Set<Long> selected) {
         Profile profile = this.profileRepo.find(guildId, userId);
         return this.setExcludedTags(guildId, userId, replaceWithin(profile.excludedTagIds(), shown, selected));
     }
 
-    public Profile setRequiredTags(long guildId, long userId, Set<Long> shown, Set<Long> selected) {
+    public synchronized Profile setRequiredTags(long guildId, long userId, Set<Long> shown, Set<Long> selected) {
         Profile profile = this.profileRepo.find(guildId, userId);
         return this.setRequiredTags(guildId, userId,
                 replaceWithin(profile.preferences().requiredTagIds(), shown, selected));
     }
 
-    public Profile setExcludedTags(long guildId, long userId, Set<Long> tagIds) {
+    public synchronized Profile setExcludedTags(long guildId, long userId, Set<Long> tagIds) {
         Set<Long> excluded = intersection(tagIds, this.existingTagIds(guildId));
         Profile profile = this.profileRepo.find(guildId, userId);
         return this.saveTagSets(profile, TagService.without(profile.tagIds(), excluded), excluded,
                 TagService.without(profile.preferences().requiredTagIds(), excluded));
     }
 
-    public Profile setRequiredTags(long guildId, long userId, Set<Long> tagIds) {
+    public synchronized Profile setRequiredTags(long guildId, long userId, Set<Long> tagIds) {
         Set<Long> required = intersection(tagIds, this.existingTagIds(guildId));
         Profile profile = this.profileRepo.find(guildId, userId);
         return this.saveTagSets(profile, profile.tagIds(), TagService.without(profile.excludedTagIds(), required),
                 required);
     }
 
-    public Profile setAnonymous(long guildId, long userId, boolean anonymous) {
+    public synchronized Profile setAnonymous(long guildId, long userId, boolean anonymous) {
         Profile updated = this.profileRepo.find(guildId, userId).withAnonymous(anonymous);
         this.profileRepo.save(updated);
         return updated;
     }
 
-    public Profile setAllowRooms(long guildId, long userId, boolean allow) {
+    public synchronized Profile setAllowRooms(long guildId, long userId, boolean allow) {
         Profile updated = this.profileRepo.find(guildId, userId).withAllowRooms(allow);
         this.profileRepo.save(updated);
         return updated;
     }
 
-    public Profile setExcludeAnonymous(long guildId, long userId, boolean exclude) {
+    public synchronized Profile setExcludeAnonymous(long guildId, long userId, boolean exclude) {
         return this.updatePreferences(guildId, userId, preferences -> preferences.withExcludeAnonymous(exclude));
     }
 
-    public Profile setExcludeDefaultAvatars(long guildId, long userId, boolean exclude) {
+    public synchronized Profile setExcludeDefaultAvatars(long guildId, long userId, boolean exclude) {
         return this.updatePreferences(guildId, userId, preferences -> preferences.withExcludeDefaultAvatars(exclude));
     }
 
-    public boolean setMinCommonTags(long guildId, long userId, int count) {
+    public synchronized boolean setMinCommonTags(long guildId, long userId, int count) {
         if (count < 0 || count > MAX_MIN_COMMON_TAGS) {
             return false;
         }
@@ -151,7 +151,7 @@ public class ProfileService {
         return true;
     }
 
-    public boolean setMinCompatibility(long guildId, long userId, Integer percent) {
+    public synchronized boolean setMinCompatibility(long guildId, long userId, Integer percent) {
         if (percent != null && (percent < 0 || percent > MAX_COMPATIBILITY)) {
             return false;
         }
@@ -160,8 +160,8 @@ public class ProfileService {
         return true;
     }
 
-    public Profile setPartnerConditions(long guildId, long userId, Integer minAccountAgeDays, Integer minMemberDays,
-            Integer minMessages, ActivityPeriod period) {
+    public synchronized Profile setPartnerConditions(long guildId, long userId, Integer minAccountAgeDays,
+            Integer minMemberDays, Integer minMessages, ActivityPeriod period) {
         MemberConditions conditions = ConditionRules.withMinAccountAge(MemberConditions.NONE, minAccountAgeDays);
         conditions = ConditionRules.withMinMemberDays(conditions, minMemberDays);
         MemberConditions newConditions = ConditionRules.withActivity(conditions, minMessages, period);
