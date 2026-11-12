@@ -32,6 +32,10 @@ public class SqliteProposalRepository implements ProposalRepository {
             FROM proposal
             WHERE status = 'OPEN' AND deadline <= ?
             """;
+    private static final String FIND_OPEN_SQL = "SELECT " + COLUMNS + """
+            FROM proposal
+            WHERE status = 'OPEN'
+            """;
     private static final String FIND_OPEN_INVOLVING_SQL = "SELECT " + COLUMNS + """
             FROM proposal
             WHERE guild_id = ? AND status = 'OPEN' AND (first_user_id = ? OR second_user_id = ?)
@@ -46,8 +50,8 @@ public class SqliteProposalRepository implements ProposalRepository {
     private static final String WHERE_BLOCKING = """
             WHERE guild_id = ? AND unblocked = 0 AND (
                 status = 'NO_MATCH'
-                OR (status = 'OPEN' AND (first_answer IN ('SKIPPED', 'CANCELLED')
-                                         OR second_answer IN ('SKIPPED', 'CANCELLED'))))
+                OR (status IN ('OPEN', 'INTERRUPTED') AND (first_answer IN ('SKIPPED', 'CANCELLED')
+                                                           OR second_answer IN ('SKIPPED', 'CANCELLED'))))
             """;
     private static final String FIND_BLOCKED_SQL = """
             SELECT first_user_id, second_user_id FROM proposal
@@ -195,6 +199,17 @@ public class SqliteProposalRepository implements ProposalRepository {
                 return readProposals(statement);
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to find expired proposals", e);
+            }
+        }
+    }
+
+    @Override
+    public List<Proposal> findOpen() {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(FIND_OPEN_SQL)) {
+                return readProposals(statement);
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to find open proposals", e);
             }
         }
     }

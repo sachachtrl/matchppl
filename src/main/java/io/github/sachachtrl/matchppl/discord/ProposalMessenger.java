@@ -57,6 +57,10 @@ public class ProposalMessenger {
         this.updateMembersStillWaiting(jda, proposal, ProposalViews.CardState.UNAVAILABLE);
     }
 
+    public void showInterrupted(JDA jda, Proposal proposal) {
+        this.updateMembersStillWaiting(jda, proposal, ProposalViews.CardState.INTERRUPTED);
+    }
+
     void update(JDA jda, Proposal proposal, long viewerId, ProposalViews.CardState state) {
         Long messageId = proposal.messageIdOf(viewerId);
         if (messageId == null) {

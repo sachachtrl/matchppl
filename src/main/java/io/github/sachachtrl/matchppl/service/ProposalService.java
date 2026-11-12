@@ -108,6 +108,16 @@ public class ProposalService {
         return interrupted;
     }
 
+    public synchronized List<Proposal> interruptAllOpen() {
+        List<Proposal> interrupted = new ArrayList<>();
+        for (Proposal proposal : this.proposalRepo.findOpen()) {
+            if (this.interrupt(proposal.id())) {
+                interrupted.add(proposal);
+            }
+        }
+        return interrupted;
+    }
+
     public Optional<Proposal> findProposal(long proposalId) {
         return this.proposalRepo.findById(proposalId);
     }

@@ -19,7 +19,7 @@ Match People suggests members of a server to each other, one person at a time, b
 
 What the matching is *for* is up to each server — finding teammates, planning outings, meeting people — so admins configure everything: tags, access conditions and timings.
 
-> **Status: work in progress.** Matching, proposals and private channels work end to end; crash recovery is next.
+> **Status: work in progress.** Matching, proposals, private channels and crash recovery work end to end.
 
 ## Features
 
@@ -35,13 +35,13 @@ What the matching is *for* is up to each server — finding teammates, planning 
 - **Private channels** — when both members accept, the bot opens a private text and voice channel that only they can see, named after the server's prefix and the lowest free number (*Match #1*, *Match #2*…). Both members stay out of matchmaking while it exists; either of them can end it early, and it is deleted automatically when its lifetime ends, with a reminder an hour before. Members who prefer not to get a channel can turn it off in `/match`: they receive each other's profile by direct message instead. A match always reveals both identities, even in anonymous mode.
 - **Reports** — every channel and every match without a channel has a *Report a problem* button. Reports go to the server's log channel, mentioning the bot's admin roles, or by direct message to members with the *Manage Server* permission when no log channel is set. The other member is never told.
 - **`/config`** — server settings for admins in a single card: response delay, matching frequency, private channels on or off, channel lifetime, name prefix, category and log channel.
+- **Crash recovery** — every deadline is stored as an absolute UTC instant, so expired proposals and channels are caught up automatically after a restart. A heartbeat written every minute also detects downtime longer than five minutes: proposals that were in progress are then interrupted (members' cards say so, and it does not count as a refusal), while a *Skip* already given still counts.
 - **Activity tracking** — daily message counts per member, used later for tag access conditions. The bot never reads message content.
 - **Translatable interface** — every user-facing text lives in resource bundles, with English as the default language.
 - **Modern message layout** — replies use Discord's Components V2: cards with sections, separators and inline buttons.
 
 ### Planned
 
-- **Crash recovery** — deadlines are already stored as absolute UTC instants and processed by the periodic task; a heartbeat will also detect downtime on restart and cleanly interrupt the proposals that were in progress.
 - **Language setting** — a server-wide language option in `/config`, as soon as a first translation is available.
 
 ## Tech stack
@@ -63,9 +63,9 @@ discord/      Layer 1 — JDA listeners: commands, buttons, message events, and 
               Translates Discord events into plain values and never makes decisions.
 service/      Layer 2 — business rules. Does not depend on JDA, so it can be unit tested.
 repository/   Layer 3 — data access. The only place containing SQL.
-scheduler/    Layer 4 — the periodic task: closes expired proposals and channels, sends
-              channel reminders, then runs a matchmaking round on every server
-              through layer 2.
+scheduler/    Layer 4 — the periodic task: records a heartbeat, closes expired proposals
+              and channels, sends channel reminders, then runs a matchmaking round
+              on every server through layer 2.
 ```
 
 Services depend on repository **interfaces**, and every dependency is injected through constructors. Storage can therefore change without touching the business rules: activity tracking moved from an in-memory map to SQLite without modifying a single line of its service or listener.

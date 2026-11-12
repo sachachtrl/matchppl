@@ -238,6 +238,16 @@ class ProposalServiceTest {
     }
 
     @Test
+    void aSkipGivenBeforeAnInterruptionStillBlocksThePair() {
+        Proposal proposal = this.propose(ALICE, BOB);
+        this.service.answer(proposal.id(), ALICE, ProposalService.Action.SKIP);
+
+        this.service.interrupt(proposal.id());
+
+        assertEquals(Set.of(new UserPair(ALICE, BOB)), this.service.blockedPairs(GUILD));
+    }
+
+    @Test
     void leavingTheServerInterruptsOnlyTheMembersOpenProposals() {
         Proposal withBob = this.propose(ALICE, BOB);
 

@@ -13,14 +13,17 @@ import io.github.sachachtrl.matchppl.discord.ResetListener;
 import io.github.sachachtrl.matchppl.discord.RoomListener;
 import io.github.sachachtrl.matchppl.discord.RoomManager;
 import io.github.sachachtrl.matchppl.discord.TagListener;
+import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.GuildConfigRepository;
+import io.github.sachachtrl.matchppl.repository.HeartbeatRepository;
 import io.github.sachachtrl.matchppl.repository.ProfileRepository;
 import io.github.sachachtrl.matchppl.repository.ProposalRepository;
 import io.github.sachachtrl.matchppl.repository.RoomRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteActivityRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteHeartbeatRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProposalRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteRoomRepository;
@@ -31,6 +34,7 @@ import io.github.sachachtrl.matchppl.scheduler.MatchmakingTask;
 import io.github.sachachtrl.matchppl.service.ActivityService;
 import io.github.sachachtrl.matchppl.service.ConditionChecker;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
+import io.github.sachachtrl.matchppl.service.HeartbeatService;
 import io.github.sachachtrl.matchppl.service.MatchingService;
 import io.github.sachachtrl.matchppl.service.MatchmakingService;
 import io.github.sachachtrl.matchppl.service.ProfileService;
@@ -43,6 +47,8 @@ import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -125,6 +131,13 @@ public class Main {
         ResetListener resetListener = new ResetListener(proposalService, guildConfigService);
         InteractionTimer interactionTimer = new InteractionTimer(clock);
 
+        HeartbeatRepository heartbeatRepo = new SqliteHeartbeatRepository(database);
+        HeartbeatService heartbeatService = new HeartbeatService(heartbeatRepo, proposalService, clock);
+        Optional<Duration> downtime = heartbeatService.downtime();
+        List<Proposal> interrupted = heartbeatService.recoverFromDowntime();
+        downtime.ifPresent(gap -> log.warn("Bot was offline for {} min: {} ongoing proposals interrupted",
+                gap.toMinutes(), interrupted.size()));
+
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
                 .enableIntents(GatewayIntent.GUILD_MEMBERS)
                 .setMemberCachePolicy(MemberCachePolicy.ALL)
@@ -143,6 +156,9 @@ public class Main {
             JDA bot = builder.build();
             Runtime.getRuntime().addShutdownHook(new Thread(() -> shutdown(bot, database, scheduler)));
             bot.awaitReady();
+            for (Proposal proposal : interrupted) {
+                messenger.showInterrupted(bot, proposal);
+            }
             bot.updateCommands()
                     .addCommands(
                             MatchListener.command(),
@@ -156,7 +172,7 @@ public class Main {
                             ConfigListener.command())
                     .queue();
             scheduler.scheduleAtFixedRate(new MatchmakingTask(bot, proposalService, matchmakingService, roomService,
-                            messenger, roomManager),
+                            messenger, roomManager, heartbeatService),
                     FIRST_ROUND_DELAY_SECONDS, ROUND_PERIOD_SECONDS, TimeUnit.SECONDS);
             log.info("Bot is logged in as {}", bot.getSelfUser().getAsTag());
         } catch (InvalidTokenException e) {

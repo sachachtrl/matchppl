@@ -5,6 +5,7 @@ import io.github.sachachtrl.matchppl.discord.ProposalMessenger;
 import io.github.sachachtrl.matchppl.discord.RoomManager;
 import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.model.Room;
+import io.github.sachachtrl.matchppl.service.HeartbeatService;
 import io.github.sachachtrl.matchppl.service.MatchmakingService;
 import io.github.sachachtrl.matchppl.service.ProposalService;
 import io.github.sachachtrl.matchppl.service.RoomService;
@@ -25,19 +26,27 @@ public class MatchmakingTask implements Runnable {
     private final RoomService roomService;
     private final ProposalMessenger messenger;
     private final RoomManager roomManager;
+    private final HeartbeatService heartbeatService;
 
     public MatchmakingTask(JDA jda, ProposalService proposalService, MatchmakingService matchmakingService,
-            RoomService roomService, ProposalMessenger messenger, RoomManager roomManager) {
+            RoomService roomService, ProposalMessenger messenger, RoomManager roomManager,
+            HeartbeatService heartbeatService) {
         this.jda = jda;
         this.proposalService = proposalService;
         this.matchmakingService = matchmakingService;
         this.roomService = roomService;
         this.messenger = messenger;
         this.roomManager = roomManager;
+        this.heartbeatService = heartbeatService;
     }
 
     @Override
     public void run() {
+        try {
+            this.heartbeatService.beat();
+        } catch (RuntimeException e) {
+            log.error("Failed to record heartbeat", e);
+        }
         try {
             for (Proposal proposal : this.proposalService.expireDue()) {
                 this.messenger.showEnded(this.jda, proposal);

@@ -26,7 +26,8 @@ final class ProposalViews {
         CANCELLED,
         MATCHED,
         ENDED,
-        UNAVAILABLE
+        UNAVAILABLE,
+        INTERRUPTED
     }
 
     record OtherMember(String name, String avatarUrl, String presentation) {}
@@ -97,6 +98,7 @@ final class ProposalViews {
             case MATCHED -> null;
             case ENDED -> "proposal.state.ended";
             case UNAVAILABLE -> "proposal.state.unavailable";
+            case INTERRUPTED -> "proposal.state.interrupted";
         };
     }
 
@@ -115,7 +117,7 @@ final class ProposalViews {
         return switch (state) {
             case PENDING -> Cards.NEUTRAL_COLOR;
             case ACCEPTED, MATCHED -> Cards.SUCCESS_COLOR;
-            case UNAVAILABLE -> Cards.WARNING_COLOR;
+            case UNAVAILABLE, INTERRUPTED -> Cards.WARNING_COLOR;
             case SKIPPED, CANCELLED, ENDED -> Cards.MUTED_COLOR;
         };
     }

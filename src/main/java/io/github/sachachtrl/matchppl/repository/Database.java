@@ -123,6 +123,12 @@ public class Database implements AutoCloseable {
             statement.executeUpdate("""
                     CREATE INDEX IF NOT EXISTS room_by_status ON room (guild_id, open)
                     """);
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS heartbeat (
+                        id      INTEGER PRIMARY KEY CHECK (id = 1),
+                        beat_at INTEGER NOT NULL
+                    )
+                    """);
         }
     }
 

@@ -29,6 +29,8 @@ public interface ProposalRepository {
 
     List<Proposal> findExpired(Instant now);
 
+    List<Proposal> findOpen();
+
     List<Proposal> findOpenInvolving(long guildId, long userId);
 
     boolean updateAnswer(long proposalId, long userId, ProposalAnswer expected, ProposalAnswer next);
