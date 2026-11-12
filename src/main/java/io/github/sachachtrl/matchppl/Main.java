@@ -2,6 +2,7 @@ package io.github.sachachtrl.matchppl;
 
 import io.github.sachachtrl.matchppl.discord.ActivityListener;
 import io.github.sachachtrl.matchppl.discord.AdminListener;
+import io.github.sachachtrl.matchppl.discord.BotCommands;
 import io.github.sachachtrl.matchppl.discord.ConfigListener;
 import io.github.sachachtrl.matchppl.discord.InteractionTimer;
 import io.github.sachachtrl.matchppl.discord.MatchListener;
@@ -159,18 +160,7 @@ public class Main {
             for (Proposal proposal : interrupted) {
                 messenger.showInterrupted(bot, proposal);
             }
-            bot.updateCommands()
-                    .addCommands(
-                            MatchListener.command(),
-                            AdminListener.setAdminCommand(),
-                            AdminListener.removeAdminCommand(),
-                            AdminListener.listAdminCommand(),
-                            TagListener.newTagCommand(),
-                            TagListener.tagsCommand(),
-                            ResetListener.resetCommand(),
-                            ResetListener.resetAllCommand(),
-                            ConfigListener.command())
-                    .queue();
+            bot.updateCommands().addCommands(BotCommands.all()).queue();
             scheduler.scheduleAtFixedRate(new MatchmakingTask(bot, proposalService, matchmakingService, roomService,
                             messenger, roomManager, heartbeatService),
                     FIRST_ROUND_DELAY_SECONDS, ROUND_PERIOD_SECONDS, TimeUnit.SECONDS);
