@@ -2,6 +2,7 @@ package io.github.sachachtrl.matchppl.service;
 
 import io.github.sachachtrl.matchppl.model.GuildSettings;
 import io.github.sachachtrl.matchppl.model.MemberSnapshot;
+import io.github.sachachtrl.matchppl.model.Profile;
 import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.model.Tag;
 import io.github.sachachtrl.matchppl.repository.Database;
@@ -94,6 +95,17 @@ class MatchmakingServiceTest {
 
         assertEquals(1, created.size());
         assertEquals(START.plus(GuildSettings.DEFAULT_RESPONSE_DELAY), created.getFirst().deadline());
+    }
+
+    @Test
+    void aRequiredTagThatNoLongerExistsIsIgnored() {
+        this.startSearching(ALICE);
+        this.startSearching(BOB);
+        Profile alice = this.profileService.getProfile(GUILD, ALICE);
+        new SqliteProfileRepository(this.database, new TextCipher(new byte[32])).save(alice.withPreferences(
+                alice.preferences().withRequiredTagIds(Set.of(this.tag.id(), 999L))));
+
+        assertEquals(1, this.round(Set.of(ALICE, BOB)).size());
     }
 
     @Test

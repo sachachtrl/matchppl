@@ -281,4 +281,15 @@ class ProfileServiceTest {
         this.service.setSearching(GUILD, USER, true);
         assertFalse(this.service.getProfile(GUILD, USER).dmUnreachable());
     }
+
+    @Test
+    void aLateDeliveryFailureDoesNotRecreateADeletedProfile() {
+        this.service.setTags(MEMBER, Set.of(this.finals.id()));
+        this.service.setSearching(GUILD, USER, true);
+        this.service.deleteProfile(GUILD, USER);
+
+        this.service.markUnreachable(GUILD, USER);
+
+        assertEquals(Profile.empty(GUILD, USER), this.service.getProfile(GUILD, USER));
+    }
 }

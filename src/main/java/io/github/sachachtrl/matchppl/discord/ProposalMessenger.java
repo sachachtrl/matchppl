@@ -144,7 +144,7 @@ public class ProposalMessenger {
 
     private ProposalViews.MatchInfo matchInfo(Proposal proposal, long otherId, Locale locale) {
         Optional<Room> room = this.roomService.findByProposal(proposal.id());
-        if (room.isPresent() && room.get().textChannelId() != null) {
+        if (room.isPresent() && room.get().voiceChannelId() != null) {
             return room.get().open()
                     ? new ProposalViews.MatchInfo(Messages.format(locale, "proposal.state.matched.room",
                             "<#" + room.get().textChannelId() + ">"), false)

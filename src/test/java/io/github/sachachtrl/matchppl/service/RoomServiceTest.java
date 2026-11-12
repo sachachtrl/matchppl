@@ -102,6 +102,7 @@ class RoomServiceTest {
     @Test
     void roomsLeftWithoutChannelsAfterARestartAreClosed() {
         Room unfinished = this.open(ALICE, BOB);
+        this.service.attachTextChannel(unfinished.id(), 102L);
         Room finished = this.open(CAROL, DAVE);
         this.service.attachChannels(finished.id(), 100L, 101L);
 

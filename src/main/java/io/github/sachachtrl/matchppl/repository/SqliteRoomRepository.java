@@ -49,12 +49,15 @@ public class SqliteRoomRepository implements RoomRepository {
             """;
     private static final String FIND_UNFINISHED_SQL = "SELECT " + COLUMNS + """
             FROM room
-            WHERE open = 1 AND text_channel_id IS NULL
+            WHERE open = 1 AND voice_channel_id IS NULL
             """;
     private static final String FIND_REMINDER_DUE_SQL = "SELECT " + COLUMNS + """
             FROM room
             WHERE open = 1 AND reminder_sent = 0 AND delete_at - ? <= ? AND delete_at > ?
                 AND delete_at - created_at > ?
+            """;
+    private static final String SET_TEXT_CHANNEL_SQL = """
+            UPDATE room SET text_channel_id = ? WHERE id = ?
             """;
     private static final String SET_CHANNELS_SQL = """
             UPDATE room SET text_channel_id = ?, voice_channel_id = ? WHERE id = ?
@@ -218,6 +221,19 @@ public class SqliteRoomRepository implements RoomRepository {
                 return readRooms(statement);
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to find rooms to remind", e);
+            }
+        }
+    }
+
+    @Override
+    public void setTextChannel(long roomId, long textChannelId) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(SET_TEXT_CHANNEL_SQL)) {
+                statement.setLong(1, textChannelId);
+                statement.setLong(2, roomId);
+                statement.executeUpdate();
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to save room text channel", e);
             }
         }
     }

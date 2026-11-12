@@ -45,6 +45,10 @@ public class RoomService {
                 proposal.secondUserId(), number, now, now.plus(this.guildConfigService.roomLifetime(guildId))));
     }
 
+    public void attachTextChannel(long roomId, long textChannelId) {
+        this.roomRepo.setTextChannel(roomId, textChannelId);
+    }
+
     public void attachChannels(long roomId, long textChannelId, long voiceChannelId) {
         this.roomRepo.setChannels(roomId, textChannelId, voiceChannelId);
     }

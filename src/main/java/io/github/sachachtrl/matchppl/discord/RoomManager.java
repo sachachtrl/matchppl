@@ -90,13 +90,14 @@ public class RoomManager {
     private void createChannels(JDA jda, Proposal proposal, Room room, Category category, String name,
             Consumer<Throwable> failure) {
         Guild guild = category.getGuild();
-        this.restrict(guild.createTextChannel(name, category), guild, room, MEMBER_TEXT, BOT_TEXT).queue(
-                text -> this.restrict(guild.createVoiceChannel(name, category), guild, room, MEMBER_VOICE, BOT_VOICE)
-                        .queue(voice -> this.opened(jda, proposal, room, text, voice.getIdLong()), error -> {
-                            this.deleteChannel(guild, room, text.getIdLong());
-                            failure.accept(error);
-                        }),
-                failure);
+        this.restrict(guild.createTextChannel(name, category), guild, room, MEMBER_TEXT, BOT_TEXT).queue(text -> {
+            this.roomService.attachTextChannel(room.id(), text.getIdLong());
+            this.restrict(guild.createVoiceChannel(name, category), guild, room, MEMBER_VOICE, BOT_VOICE)
+                    .queue(voice -> this.opened(jda, proposal, room, text, voice.getIdLong()), error -> {
+                        this.deleteChannel(guild, room, text.getIdLong());
+                        failure.accept(error);
+                    });
+        }, failure);
     }
 
     private void deleteChannel(Guild guild, Room room, Long channelId) {

@@ -61,6 +61,9 @@ public class ProfileService {
 
     public synchronized void markUnreachable(long guildId, long userId) {
         Profile profile = this.profileRepo.find(guildId, userId);
+        if (!profile.searching()) {
+            return;
+        }
         this.profileRepo.save(profile.withSearching(false, null).withDmUnreachable(true));
     }
 

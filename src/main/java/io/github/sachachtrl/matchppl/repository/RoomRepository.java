@@ -30,6 +30,8 @@ public interface RoomRepository {
 
     List<Room> findReminderDue(Instant now, Duration notice);
 
+    void setTextChannel(long roomId, long textChannelId);
+
     void setChannels(long roomId, long textChannelId, long voiceChannelId);
 
     boolean markReminderSent(long roomId);

@@ -63,6 +63,15 @@ public class MatchmakingService {
                 pair -> this.stillAllowed(guildId, pair));
     }
 
+    private static Profile withoutDeletedTags(Profile profile, List<Tag> tags) {
+        Set<Long> existing = tags.stream().map(Tag::id).collect(Collectors.toSet());
+        Set<Long> required = new HashSet<>(profile.preferences().requiredTagIds());
+        if (!required.retainAll(existing)) {
+            return profile;
+        }
+        return profile.withPreferences(profile.preferences().withRequiredTagIds(required));
+    }
+
     private boolean stillAllowed(long guildId, MatchPair pair) {
         return !this.blockService.isBlocked(guildId, pair.firstUserId(), pair.secondUserId())
                 && this.profileService.getProfile(guildId, pair.firstUserId()).searching()
@@ -85,7 +94,7 @@ public class MatchmakingService {
                     .filter(tag -> this.tagService.canUse(tag, member.get()))
                     .map(Tag::id)
                     .collect(Collectors.toSet());
-            candidates.add(new MatchCandidate(profile, member.get(), usable));
+            candidates.add(new MatchCandidate(withoutDeletedTags(profile, tags), member.get(), usable));
         }
         return candidates;
     }

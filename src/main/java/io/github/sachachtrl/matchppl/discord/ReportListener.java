@@ -139,7 +139,7 @@ public class ReportListener extends ListenerAdapter {
 
     private String proposalContext(Proposal proposal) {
         Optional<Room> room = this.roomService.findByProposal(proposal.id())
-                .filter(found -> found.textChannelId() != null);
+                .filter(found -> found.voiceChannelId() != null);
         return room.isPresent()
                 ? this.roomContext(room.get())
                 : Messages.format(this.guildConfigService.language(proposal.guildId()), "report.log.direct",
