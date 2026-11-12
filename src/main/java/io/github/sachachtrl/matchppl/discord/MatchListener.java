@@ -133,7 +133,8 @@ public class MatchListener extends ListenerAdapter {
             }
             case ProfileViews.MAIN -> this.edit(event, this.mainView(member, locale));
             case ProfileViews.PRESENTATION -> event.replyModal(this.presentationModal(guildId, userId, locale)).queue();
-            case ProfileViews.COMPATIBILITY -> event.replyModal(this.compatibilityModal(guildId, userId, locale)).queue();
+            case ProfileViews.COMPATIBILITY ->
+                    event.replyModal(this.compatibilityModal(guildId, userId, locale)).queue();
             case ProfileViews.CONDITIONS -> event.replyModal(this.conditionsModal(guildId, userId, locale)).queue();
             default -> {
             }
@@ -205,7 +206,8 @@ public class MatchListener extends ListenerAdapter {
             }
             case COMPATIBILITY_MODAL -> {
                 try {
-                    Integer percent = ModalInputs.parseNumber(event.getValue(VALUE_INPUT), ProfileService.MAX_COMPATIBILITY);
+                    Integer percent = ModalInputs.parseNumber(event.getValue(VALUE_INPUT),
+                            ProfileService.MAX_COMPATIBILITY);
                     this.profileService.setMinCompatibility(guildId, userId, percent);
                 } catch (IllegalArgumentException e) {
                     this.replyError(event, Messages.get(locale, "error.compat_invalid"), locale);
@@ -214,17 +216,21 @@ public class MatchListener extends ListenerAdapter {
                 this.edit(event, this.advancedView(member, locale));
             }
             case CONDITIONS_MODAL -> {
+                Integer age;
+                Integer seniority;
+                Integer messages;
+                int max = ModalInputs.MAX_DAYS;
                 try {
-                    this.profileService.setPartnerConditions(guildId, userId,
-                            ModalInputs.parseNumber(event.getValue(AGE_INPUT), ModalInputs.MAX_DAYS),
-                            ModalInputs.parseNumber(event.getValue(SENIORITY_INPUT), ModalInputs.MAX_DAYS),
-                            ModalInputs.parseNumber(event.getValue(MESSAGES_INPUT), ModalInputs.MAX_MESSAGES),
-                            ModalInputs.parsePeriod(event.getValue(PERIOD_INPUT)));
+                    age = ModalInputs.parseNumber(event.getValue(AGE_INPUT), max);
+                    seniority = ModalInputs.parseNumber(event.getValue(SENIORITY_INPUT), max);
+                    max = ModalInputs.MAX_MESSAGES;
+                    messages = ModalInputs.parseNumber(event.getValue(MESSAGES_INPUT), max);
                 } catch (IllegalArgumentException e) {
-                    this.replyError(event, Messages.format(locale, "tag.error.number_invalid", ModalInputs.MAX_DAYS),
-                            locale);
+                    this.replyError(event, Messages.format(locale, "tag.error.number_invalid", max), locale);
                     return;
                 }
+                this.profileService.setPartnerConditions(guildId, userId, age, seniority, messages,
+                        ModalInputs.parsePeriod(event.getValue(PERIOD_INPUT)));
                 this.edit(event, this.advancedView(member, locale));
             }
             default -> {
