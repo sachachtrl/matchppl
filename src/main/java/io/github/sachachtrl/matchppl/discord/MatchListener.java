@@ -2,7 +2,9 @@ package io.github.sachachtrl.matchppl.discord;
 
 import io.github.sachachtrl.matchppl.model.MemberConditions;
 import io.github.sachachtrl.matchppl.model.Profile;
+import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
+import io.github.sachachtrl.matchppl.service.MemberDataService;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 import io.github.sachachtrl.matchppl.service.TagService;
 
@@ -48,12 +50,17 @@ public class MatchListener extends ListenerAdapter {
     private final ProfileService profileService;
     private final TagService tagService;
     private final GuildConfigService guildConfigService;
+    private final MemberDataService memberDataService;
+    private final ProposalMessenger messenger;
 
     public MatchListener(ProfileService profileService, TagService tagService,
-            GuildConfigService guildConfigService) {
+            GuildConfigService guildConfigService, MemberDataService memberDataService,
+            ProposalMessenger messenger) {
         this.profileService = profileService;
         this.tagService = tagService;
         this.guildConfigService = guildConfigService;
+        this.memberDataService = memberDataService;
+        this.messenger = messenger;
     }
 
     public static SlashCommandData command() {
@@ -114,6 +121,16 @@ public class MatchListener extends ListenerAdapter {
                 this.edit(event, this.advancedView(member, locale));
             }
             case ProfileViews.ADVANCED -> this.edit(event, this.advancedView(member, locale));
+            case ProfileViews.DELETE -> this.edit(event, ProfileViews.deleteConfirmation(locale));
+            case ProfileViews.DELETE_CONFIRM -> {
+                MemberDataService.Forgotten forgotten = this.memberDataService.deleteOnRequest(guildId, userId);
+                for (Proposal proposal : forgotten.interruptedProposals()) {
+                    this.messenger.showUnavailable(event.getJDA(), proposal);
+                }
+                log.info("Profile deleted on request: guild={}, user={}, interruptedProposals={}",
+                        guildId, userId, forgotten.interruptedProposals().size());
+                this.edit(event, ProfileViews.deleted(locale));
+            }
             case ProfileViews.MAIN -> this.edit(event, this.mainView(member, locale));
             case ProfileViews.PRESENTATION -> event.replyModal(this.presentationModal(guildId, userId, locale)).queue();
             case ProfileViews.COMPATIBILITY -> event.replyModal(this.compatibilityModal(guildId, userId, locale)).queue();

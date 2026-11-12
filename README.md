@@ -105,7 +105,7 @@ mvn test
 ## Privacy
 
 - The bot requests the `GUILD_MESSAGES` intent to count messages, and the privileged `GUILD_MEMBERS` intent to check roles, server seniority and avatars when matching, and to notice when a member leaves. It does **not** use the privileged *Message Content* intent and never reads what members write.
-- Profiles are **per server** and cannot be copied from one server to another. A member's profile and message counts are **deleted** as soon as they leave the server.
+- Profiles are **per server** and cannot be copied from one server to another. Members can **delete their profile and message counts at any time** from `/match`, and both are deleted automatically as soon as they leave the server.
 - When the bot is kicked or banned from a server, **everything it stored about that server is deleted**: profiles, tags, settings, activity, proposals and channel records.
 - Member introductions are **encrypted at rest** with AES-256-GCM. The key lives outside the database, so a leaked database file alone reveals none of them.
 - Excluded tags are private: the other person is never told why they were not proposed.

@@ -43,6 +43,7 @@ import io.github.sachachtrl.matchppl.service.GuildDataService;
 import io.github.sachachtrl.matchppl.service.HeartbeatService;
 import io.github.sachachtrl.matchppl.service.MatchingService;
 import io.github.sachachtrl.matchppl.service.MatchmakingService;
+import io.github.sachachtrl.matchppl.service.MemberDataService;
 import io.github.sachachtrl.matchppl.service.ProfileService;
 import io.github.sachachtrl.matchppl.service.ProposalService;
 import io.github.sachachtrl.matchppl.service.RoomService;
@@ -117,7 +118,6 @@ public class Main {
 
         ProfileRepository profileRepo = new SqliteProfileRepository(database, cipher);
         ProfileService profileService = new ProfileService(profileRepo, tagService, clock);
-        MatchListener matchListener = new MatchListener(profileService, tagService, guildConfigService);
         ConfigListener configListener = new ConfigListener(guildConfigService, profileService);
 
         ProposalRepository proposalRepo = new SqliteProposalRepository(database);
@@ -133,8 +133,11 @@ public class Main {
         ProposalListener proposalListener = new ProposalListener(proposalService, messenger, roomManager);
         RoomListener roomListener = new RoomListener(roomService, roomManager, guildConfigService);
         ReportListener reportListener = new ReportListener(roomService, proposalService, guildConfigService);
-        MemberListener memberListener = new MemberListener(profileService, proposalService, roomService, messenger,
-                roomManager, activityService);
+        MemberDataService memberDataService = new MemberDataService(profileService, activityService,
+                proposalService, roomService);
+        MemberListener memberListener = new MemberListener(memberDataService, messenger, roomManager);
+        MatchListener matchListener = new MatchListener(profileService, tagService, guildConfigService,
+                memberDataService, messenger);
         ResetListener resetListener = new ResetListener(proposalService, guildConfigService);
         GuildDataRepository guildDataRepo = new SqliteGuildDataRepository(database);
         GuildDataService guildDataService = new GuildDataService(guildDataRepo);

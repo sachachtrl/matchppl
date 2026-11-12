@@ -33,6 +33,8 @@ final class ProfileViews {
     static final String ROOMS_ON = PREFIX + "rooms:on";
     static final String ROOMS_OFF = PREFIX + "rooms:off";
     static final String ADVANCED = PREFIX + "advanced";
+    static final String DELETE = PREFIX + "delete";
+    static final String DELETE_CONFIRM = PREFIX + "delete:confirm";
     static final String MAIN = PREFIX + "main";
     static final String REQUIRED = PREFIX + "required";
     static final String COMPATIBILITY = PREFIX + "compatibility";
@@ -98,7 +100,9 @@ final class ProfileViews {
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
         children.add(toggleSection(profile.allowRooms(), ROOMS_ON, ROOMS_OFF, "profile.rooms", locale));
         children.add(Separator.createDivider(Separator.Spacing.LARGE));
-        children.add(ActionRow.of(Button.secondary(ADVANCED, Messages.get(locale, "profile.button.advanced"))));
+        children.add(ActionRow.of(
+                Button.secondary(ADVANCED, Messages.get(locale, "profile.button.advanced")),
+                Button.danger(DELETE, Messages.get(locale, "profile.button.delete"))));
         return Container.of(children)
                 .withAccentColor(profile.searching() ? Cards.SUCCESS_COLOR : Cards.ERROR_COLOR);
     }
@@ -205,6 +209,26 @@ final class ProfileViews {
             case 1 -> Messages.get(locale, "advanced.common.option.one");
             default -> Messages.format(locale, "advanced.common.option.other", count);
         };
+    }
+
+    static Container deleteConfirmation(Locale locale) {
+        return Container.of(
+                TextDisplay.of("## " + Messages.get(locale, "profile.delete.title")),
+                Separator.createDivider(Separator.Spacing.SMALL),
+                TextDisplay.of(Messages.get(locale, "profile.delete.explanation")),
+                TextDisplay.of("-# " + Messages.get(locale, "profile.delete.kept")),
+                TextDisplay.of("-# " + Messages.get(locale, "profile.delete.history")),
+                TextDisplay.of(Messages.get(locale, "reset.irreversible")),
+                Separator.createDivider(Separator.Spacing.LARGE),
+                ActionRow.of(
+                        Button.danger(DELETE_CONFIRM, Messages.get(locale, "profile.button.delete")),
+                        Button.secondary(MAIN, Messages.get(locale, "reset.cancel")))
+        ).withAccentColor(Cards.ERROR_COLOR);
+    }
+
+    static Container deleted(Locale locale) {
+        return Cards.simple(Cards.SUCCESS_COLOR, Messages.get(locale, "profile.delete.done.title"),
+                Messages.get(locale, "profile.delete.done.text"));
     }
 
     static int pageCount(List<Tag> tags) {
