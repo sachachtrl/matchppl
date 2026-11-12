@@ -91,7 +91,9 @@ class SqliteProfileRepositoryTest {
 
     @Test
     void profilesAreSeparatedByGuild() {
-        this.repository.save(Profile.empty(GUILD, USER).withSearching(true, Instant.parse("2026-11-11T12:00:00Z")).withPresentation("Hello"));
+        this.repository.save(Profile.empty(GUILD, USER)
+                .withSearching(true, Instant.parse("2026-11-11T12:00:00Z"))
+                .withPresentation("Hello"));
 
         Profile other = this.repository.find(OTHER_GUILD, USER);
         assertFalse(other.searching());

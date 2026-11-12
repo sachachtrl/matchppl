@@ -20,18 +20,6 @@ import java.util.Set;
 import java.util.random.RandomGenerator;
 
 public class MatchingService {
-    private static final Comparator<Option> BEST_FIRST = ((Comparator<Option>) MatchingService::compareScores)
-            .thenComparing(Option::longestWait)
-            .thenComparing(Option::shortestWait);
-
-    private final ConditionChecker conditionChecker;
-    private final RandomGenerator random;
-
-    public MatchingService(ConditionChecker conditionChecker, RandomGenerator random) {
-        this.conditionChecker = conditionChecker;
-        this.random = random;
-    }
-
     private final class Prepared {
         private final MatchCandidate candidate;
         private final Set<Long> tags;
@@ -56,6 +44,18 @@ public class MatchingService {
     }
 
     private record Option(MatchPair pair, Instant longestWait, Instant shortestWait) {}
+
+    private static final Comparator<Option> BEST_FIRST = ((Comparator<Option>) MatchingService::compareScores)
+            .thenComparing(Option::longestWait)
+            .thenComparing(Option::shortestWait);
+
+    private final ConditionChecker conditionChecker;
+    private final RandomGenerator random;
+
+    public MatchingService(ConditionChecker conditionChecker, RandomGenerator random) {
+        this.conditionChecker = conditionChecker;
+        this.random = random;
+    }
 
     public List<MatchPair> findPairs(List<MatchCandidate> candidates, Set<UserPair> blockedPairs) {
         List<Prepared> prepared = candidates.stream()

@@ -47,7 +47,8 @@ public class AdminListener extends ListenerAdapter {
     }
 
     public static SlashCommandData listAdminCommand() {
-        return Commands.slash(LIST_ADMIN_COMMAND, Messages.get(Messages.DEFAULT_LOCALE, "command.listadmin.description"))
+        return Commands.slash(LIST_ADMIN_COMMAND,
+                        Messages.get(Messages.DEFAULT_LOCALE, "command.listadmin.description"))
                 .setContexts(InteractionContextType.GUILD)
                 .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MANAGE_SERVER));
     }

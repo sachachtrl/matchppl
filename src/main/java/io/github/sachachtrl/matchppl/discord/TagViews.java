@@ -68,7 +68,8 @@ final class TagViews {
 
     static Container listCard(List<Tag> tags, int page, Locale locale) {
         if (tags.isEmpty()) {
-            return Cards.simple(Cards.NEUTRAL_COLOR, Messages.get(locale, "tags.title"), Messages.get(locale, "tags.empty"));
+            return Cards.simple(Cards.NEUTRAL_COLOR, Messages.get(locale, "tags.title"),
+                    Messages.get(locale, "tags.empty"));
         }
         int pageCount = pageCount(tags.size());
         int currentPage = Math.clamp(page, 0, pageCount - 1);
@@ -100,7 +101,8 @@ final class TagViews {
                 TextDisplay.of(Messages.get(locale, "tag.delete.warning")),
                 Separator.createDivider(Separator.Spacing.LARGE),
                 ActionRow.of(
-                        Button.danger(componentId(CONFIRM_DELETE, tag.id()), Messages.get(locale, "tag.delete.confirm")),
+                        Button.danger(componentId(CONFIRM_DELETE, tag.id()),
+                                Messages.get(locale, "tag.delete.confirm")),
                         Button.secondary(componentId(MANAGE, tag.id()), Messages.get(locale, "tag.delete.cancel")))
         ).withAccentColor(Cards.WARNING_COLOR);
     }
