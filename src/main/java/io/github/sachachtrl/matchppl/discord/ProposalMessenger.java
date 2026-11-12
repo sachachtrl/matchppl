@@ -65,11 +65,16 @@ public class ProposalMessenger {
     }
 
     void update(JDA jda, Proposal proposal, long viewerId, ProposalViews.CardState state) {
+        this.update(jda, proposal, viewerId, state, null);
+    }
+
+    private void update(JDA jda, Proposal proposal, long viewerId, ProposalViews.CardState state,
+            String knownGuildName) {
         Long messageId = proposal.messageIdOf(viewerId);
         if (messageId == null) {
             return;
         }
-        Container card = this.render(jda, proposal, viewerId, state);
+        Container card = this.render(jda, proposal, viewerId, state, knownGuildName);
         jda.retrieveUserById(viewerId)
                 .flatMap(User::openPrivateChannel)
                 .flatMap(channel -> channel.editMessageComponentsById(messageId, card).useComponentsV2())
@@ -95,6 +100,11 @@ public class ProposalMessenger {
     }
 
     Container render(JDA jda, Proposal proposal, long viewerId, ProposalViews.CardState state) {
+        return this.render(jda, proposal, viewerId, state, null);
+    }
+
+    private Container render(JDA jda, Proposal proposal, long viewerId, ProposalViews.CardState state,
+            String knownGuildName) {
         Locale locale = this.guildConfigService.language(proposal.guildId());
         long guildId = proposal.guildId();
         long otherId = proposal.otherUserId(viewerId);
@@ -117,7 +127,8 @@ public class ProposalMessenger {
                 .filter(tag -> viewerProfile.tagIds().contains(tag.id()) && otherProfile.tagIds().contains(tag.id()))
                 .map(TagViews::title)
                 .toList();
-        String guildName = guild == null ? Messages.get(locale, "proposal.unknown_server") : guild.getName();
+        String guildName = knownGuildName != null ? knownGuildName
+                : guild == null ? Messages.get(locale, "proposal.unknown_server") : guild.getName();
         ProposalViews.MatchInfo match = state == ProposalViews.CardState.MATCHED
                 ? this.matchInfo(proposal, otherId, locale)
                 : null;
@@ -170,10 +181,10 @@ public class ProposalMessenger {
         log.info("Proposal not delivered: proposal={}, user={}, unreachable={}", proposal.id(), viewerId, unreachable);
     }
 
-    void showServerLeft(JDA jda, Proposal proposal) {
+    void showServerLeft(JDA jda, Proposal proposal, String guildName) {
         for (long userId : List.of(proposal.firstUserId(), proposal.secondUserId())) {
             if (proposal.answerOf(userId).keepsMemberBusy()) {
-                this.update(jda, proposal, userId, ProposalViews.CardState.UNAVAILABLE);
+                this.update(jda, proposal, userId, ProposalViews.CardState.UNAVAILABLE, guildName);
             }
         }
     }

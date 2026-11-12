@@ -29,7 +29,7 @@ public class GuildListener extends ListenerAdapter {
         long guildId = event.getGuild().getIdLong();
         List<Proposal> open = this.proposalService.openProposals(guildId);
         for (Proposal proposal : open) {
-            this.messenger.showServerLeft(event.getJDA(), proposal);
+            this.messenger.showServerLeft(event.getJDA(), proposal, event.getGuild().getName());
         }
         this.guildDataService.forgetGuild(guildId);
         log.info("Bot removed from a server, all its data deleted: guild={}, openProposals={}", guildId, open.size());
