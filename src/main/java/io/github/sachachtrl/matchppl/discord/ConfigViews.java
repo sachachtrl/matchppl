@@ -4,10 +4,13 @@ import io.github.sachachtrl.matchppl.model.GuildSettings;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.container.Container;
+import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.section.Section;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.components.selections.SelectOption;
@@ -31,47 +34,55 @@ final class ConfigViews {
     static final String BACK = PREFIX + "back";
     static final String LANGUAGE = PREFIX + "language";
 
+    record Warnings(boolean roomsBlocked, boolean logChannelBlocked) {}
+
     private ConfigViews() {
     }
 
-    static Container card(GuildSettings settings, int searchingCount, Locale locale) {
-        return Container.of(
-                TextDisplay.of("## " + Messages.get(locale, "config.title") + "\n-# "
-                        + Messages.get(locale, "config.subtitle")),
-                Separator.createDivider(Separator.Spacing.LARGE),
-                TextDisplay.of("**" + Messages.get(locale, "config.language.title") + "**\n-# "
-                        + Messages.get(locale, "config.language.hint")),
-                ActionRow.of(languageSelect(settings.language())),
-                Separator.createDivider(Separator.Spacing.LARGE),
-                TextDisplay.of("### " + Messages.get(locale, "config.section.proposals")),
-                editSection(RESPONSE_DELAY, "config.response_delay", settings.responseDelay(), locale),
-                editSection(MATCHING_INTERVAL, "config.matching_interval", settings.matchingInterval(), locale),
-                Separator.createDivider(Separator.Spacing.LARGE),
-                TextDisplay.of("### " + Messages.get(locale, "config.section.channels")),
-                roomsSection(settings.roomsEnabled(), locale),
-                editSection(ROOM_LIFETIME, "config.room_lifetime", settings.roomLifetime(), locale),
-                Section.of(
-                        Button.secondary(ROOM_PREFIX, Messages.get(locale, "config.button.edit")),
-                        TextDisplay.of("**" + Messages.get(locale, "config.room_prefix.title") + "**\n-# "
-                                + Messages.format(locale, "config.room_prefix.value",
-                                        settings.roomPrefix(), settings.roomPrefix()))),
-                TextDisplay.of("**" + Messages.get(locale, "config.category.title") + "**\n-# "
-                        + Messages.get(locale, "config.category.hint")),
-                ActionRow.of(channelSelect(CATEGORY, ChannelType.CATEGORY, settings.categoryId(),
-                        Messages.get(locale, "config.category.placeholder"))),
-                Separator.createDivider(Separator.Spacing.LARGE),
-                TextDisplay.of("### " + Messages.get(locale, "config.section.moderation")),
-                TextDisplay.of("**" + Messages.get(locale, "config.log_channel.title") + "**\n-# "
-                        + Messages.get(locale, "config.log_channel.hint")),
-                ActionRow.of(channelSelect(LOG_CHANNEL, ChannelType.TEXT, settings.logChannelId(),
-                        Messages.get(locale, "config.log_channel.placeholder"))),
-                Separator.createDivider(Separator.Spacing.SMALL),
-                Section.of(
-                        Button.danger(STOP_ALL, Messages.get(locale, "config.stop_all.button"))
-                                .withDisabled(searchingCount == 0),
-                        TextDisplay.of("**" + Messages.get(locale, "config.stop_all.title") + "**\n-# "
-                                + countText(locale, "config.stop_all.value", searchingCount)))
-        ).withAccentColor(Cards.NEUTRAL_COLOR);
+    static Container card(GuildSettings settings, int searchingCount, Warnings warnings, Locale locale) {
+        List<ContainerChildComponent> children = new ArrayList<>();
+        children.add(TextDisplay.of("## " + Messages.get(locale, "config.title") + "\n-# "
+                + Messages.get(locale, "config.subtitle")));
+        children.add(Separator.createDivider(Separator.Spacing.LARGE));
+        children.add(TextDisplay.of("**" + Messages.get(locale, "config.language.title") + "**\n-# "
+                + Messages.get(locale, "config.language.hint")));
+        children.add(ActionRow.of(languageSelect(settings.language())));
+        children.add(Separator.createDivider(Separator.Spacing.LARGE));
+        children.add(TextDisplay.of("### " + Messages.get(locale, "config.section.proposals")));
+        children.add(editSection(RESPONSE_DELAY, "config.response_delay", settings.responseDelay(), locale));
+        children.add(editSection(MATCHING_INTERVAL, "config.matching_interval", settings.matchingInterval(), locale));
+        children.add(Separator.createDivider(Separator.Spacing.LARGE));
+        children.add(TextDisplay.of("### " + Messages.get(locale, "config.section.channels")));
+        children.add(roomsSection(settings.roomsEnabled(), locale));
+        if (settings.roomsEnabled() && warnings.roomsBlocked()) {
+            children.add(TextDisplay.of(Messages.get(locale, "config.warning.rooms")));
+        }
+        children.add(editSection(ROOM_LIFETIME, "config.room_lifetime", settings.roomLifetime(), locale));
+        children.add(Section.of(
+                Button.secondary(ROOM_PREFIX, Messages.get(locale, "config.button.edit")),
+                TextDisplay.of("**" + Messages.get(locale, "config.room_prefix.title") + "**\n-# "
+                        + Messages.format(locale, "config.room_prefix.value",
+                                settings.roomPrefix(), settings.roomPrefix()))));
+        children.add(TextDisplay.of("**" + Messages.get(locale, "config.category.title") + "**\n-# "
+                + Messages.get(locale, "config.category.hint")));
+        children.add(ActionRow.of(channelSelect(CATEGORY, ChannelType.CATEGORY, settings.categoryId(),
+                Messages.get(locale, "config.category.placeholder"))));
+        children.add(Separator.createDivider(Separator.Spacing.LARGE));
+        children.add(TextDisplay.of("### " + Messages.get(locale, "config.section.moderation")));
+        children.add(TextDisplay.of("**" + Messages.get(locale, "config.log_channel.title") + "**\n-# "
+                + Messages.get(locale, "config.log_channel.hint")));
+        children.add(ActionRow.of(channelSelect(LOG_CHANNEL, ChannelType.TEXT, settings.logChannelId(),
+                Messages.get(locale, "config.log_channel.placeholder"))));
+        if (warnings.logChannelBlocked()) {
+            children.add(TextDisplay.of(Messages.get(locale, "config.warning.log_channel")));
+        }
+        children.add(Separator.createDivider(Separator.Spacing.SMALL));
+        children.add(Section.of(
+                Button.danger(STOP_ALL, Messages.get(locale, "config.stop_all.button"))
+                        .withDisabled(searchingCount == 0),
+                TextDisplay.of("**" + Messages.get(locale, "config.stop_all.title") + "**\n-# "
+                        + countText(locale, "config.stop_all.value", searchingCount))));
+        return Container.of(children).withAccentColor(Cards.NEUTRAL_COLOR);
     }
 
     static Container stopAllConfirmation(int searchingCount, Locale locale) {

@@ -23,6 +23,9 @@ public final class BotCommands {
                         ResetListener.resetCommand(),
                         ResetListener.resetAllCommand(),
                         ResetListener.resetPairCommand(),
+                        BlockListener.blockCommand(),
+                        BlockListener.unblockCommand(),
+                        BlockListener.blockListCommand(),
                         ConfigListener.command())
                 .stream()
                 .map(BotCommands::localize)

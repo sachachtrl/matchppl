@@ -7,6 +7,7 @@ import io.github.sachachtrl.matchppl.service.ProfileService;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.textinput.TextInput;
@@ -14,6 +15,7 @@ import net.dv8tion.jda.api.components.textinput.TextInputStyle;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
@@ -242,8 +244,21 @@ public class ConfigListener extends ListenerAdapter {
 
     private Container view(Guild guild, Locale locale) {
         long guildId = guild.getIdLong();
-        return ConfigViews.card(this.guildConfigService.settings(guildId), this.profileService.countSearching(guildId),
+        GuildSettings settings = this.guildConfigService.settings(guildId);
+        return ConfigViews.card(settings, this.profileService.countSearching(guildId), warnings(guild, settings),
                 locale);
+    }
+
+    private static ConfigViews.Warnings warnings(Guild guild, GuildSettings settings) {
+        Member self = guild.getSelfMember();
+        boolean roomsBlocked = !self.hasPermission(Permission.MANAGE_CHANNEL, Permission.MANAGE_ROLES);
+        boolean logChannelBlocked = false;
+        if (settings.logChannelId() != null) {
+            GuildMessageChannel channel = guild.getChannelById(GuildMessageChannel.class, settings.logChannelId());
+            logChannelBlocked = channel == null
+                    || !self.hasPermission(channel, Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND);
+        }
+        return new ConfigViews.Warnings(roomsBlocked, logChannelBlocked);
     }
 
     private void refresh(IMessageEditCallback event, Guild guild, Locale locale) {

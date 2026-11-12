@@ -6,6 +6,7 @@ import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.model.Tag;
 import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.InMemoryActivityRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteBlockRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProposalRepository;
@@ -38,6 +39,7 @@ class MatchmakingServiceTest {
     private MutableClock clock;
     private ProfileService profileService;
     private ProposalService proposalService;
+    private BlockService blockService;
     private MatchmakingService service;
     private Tag tag;
 
@@ -55,8 +57,11 @@ class MatchmakingServiceTest {
                         new GuildConfigService(new SqliteGuildConfigRepository(this.database)), this.clock),
                 this.clock);
         GuildConfigService guildConfigService = new GuildConfigService(new SqliteGuildConfigRepository(this.database));
+        this.blockService = new BlockService(new SqliteBlockRepository(this.database), this.proposalService,
+                this.clock);
         this.service = new MatchmakingService(this.profileService, tagService,
-                new MatchingService(checker, new Random(1)), this.proposalService, guildConfigService, this.clock);
+                new MatchingService(checker, new Random(1)), this.proposalService, guildConfigService,
+                this.blockService, this.clock);
         this.tag = ((TagService.Created) tagService.createTag(GUILD, "Fortnite", "🎮")).tag();
     }
 
@@ -89,6 +94,19 @@ class MatchmakingServiceTest {
 
         assertEquals(1, created.size());
         assertEquals(START.plus(GuildSettings.DEFAULT_RESPONSE_DELAY), created.getFirst().deadline());
+    }
+
+    @Test
+    void aBlockedMemberIsNeverProposedUntilUnblocked() {
+        this.startSearching(ALICE);
+        this.startSearching(BOB);
+        this.blockService.block(GUILD, BOB, ALICE);
+
+        assertTrue(this.round(Set.of(ALICE, BOB)).isEmpty());
+
+        this.blockService.unblock(GUILD, BOB, ALICE);
+        this.clock.advance(Duration.ofMinutes(1));
+        assertEquals(1, this.round(Set.of(ALICE, BOB)).size());
     }
 
     @Test

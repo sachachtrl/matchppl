@@ -6,11 +6,13 @@ import io.github.sachachtrl.matchppl.model.MemberSnapshot;
 import io.github.sachachtrl.matchppl.model.Profile;
 import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.model.Tag;
+import io.github.sachachtrl.matchppl.model.UserPair;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,16 +29,19 @@ public class MatchmakingService {
     private final MatchingService matchingService;
     private final ProposalService proposalService;
     private final GuildConfigService guildConfigService;
+    private final BlockService blockService;
     private final Clock clock;
     private final Map<Long, Instant> lastRuns = new ConcurrentHashMap<>();
 
     public MatchmakingService(ProfileService profileService, TagService tagService, MatchingService matchingService,
-            ProposalService proposalService, GuildConfigService guildConfigService, Clock clock) {
+            ProposalService proposalService, GuildConfigService guildConfigService, BlockService blockService,
+            Clock clock) {
         this.profileService = profileService;
         this.tagService = tagService;
         this.matchingService = matchingService;
         this.proposalService = proposalService;
         this.guildConfigService = guildConfigService;
+        this.blockService = blockService;
         this.clock = clock;
     }
 
@@ -51,7 +56,9 @@ public class MatchmakingService {
         }
         this.lastRuns.put(guildId, now);
         List<MatchCandidate> candidates = this.freeCandidates(guildId, members);
-        List<MatchPair> pairs = this.matchingService.findPairs(candidates, this.proposalService.blockedPairs(guildId));
+        Set<UserPair> blocked = new HashSet<>(this.proposalService.blockedPairs(guildId));
+        blocked.addAll(this.blockService.blockedPairs(guildId));
+        List<MatchPair> pairs = this.matchingService.findPairs(candidates, blocked);
         return this.proposalService.createProposals(guildId, pairs, this.guildConfigService.responseDelay(guildId));
     }
 

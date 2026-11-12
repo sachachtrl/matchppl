@@ -2,6 +2,7 @@ package io.github.sachachtrl.matchppl;
 
 import io.github.sachachtrl.matchppl.discord.ActivityListener;
 import io.github.sachachtrl.matchppl.discord.AdminListener;
+import io.github.sachachtrl.matchppl.discord.BlockListener;
 import io.github.sachachtrl.matchppl.discord.BotCommands;
 import io.github.sachachtrl.matchppl.discord.ConfigListener;
 import io.github.sachachtrl.matchppl.discord.GuildListener;
@@ -17,6 +18,7 @@ import io.github.sachachtrl.matchppl.discord.RoomManager;
 import io.github.sachachtrl.matchppl.discord.TagListener;
 import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
+import io.github.sachachtrl.matchppl.repository.BlockRepository;
 import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.GuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.GuildDataRepository;
@@ -25,6 +27,7 @@ import io.github.sachachtrl.matchppl.repository.ProfileRepository;
 import io.github.sachachtrl.matchppl.repository.ProposalRepository;
 import io.github.sachachtrl.matchppl.repository.RoomRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteActivityRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteBlockRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildDataRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteHeartbeatRepository;
@@ -37,6 +40,7 @@ import io.github.sachachtrl.matchppl.repository.TextCipher;
 import io.github.sachachtrl.matchppl.scheduler.ActivityPurgeTask;
 import io.github.sachachtrl.matchppl.scheduler.MatchmakingTask;
 import io.github.sachachtrl.matchppl.service.ActivityService;
+import io.github.sachachtrl.matchppl.service.BlockService;
 import io.github.sachachtrl.matchppl.service.ConditionChecker;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
 import io.github.sachachtrl.matchppl.service.GuildDataService;
@@ -124,9 +128,11 @@ public class Main {
         RoomRepository roomRepo = new SqliteRoomRepository(database);
         RoomService roomService = new RoomService(roomRepo, profileService, guildConfigService, clock);
         ProposalService proposalService = new ProposalService(proposalRepo, profileService, roomService, clock);
+        BlockRepository blockRepo = new SqliteBlockRepository(database);
+        BlockService blockService = new BlockService(blockRepo, proposalService, clock);
         MatchingService matchingService = new MatchingService(conditionChecker, new SecureRandom());
         MatchmakingService matchmakingService = new MatchmakingService(profileService, tagService, matchingService,
-                proposalService, guildConfigService, clock);
+                proposalService, guildConfigService, blockService, clock);
         ProposalMessenger messenger = new ProposalMessenger(proposalService, profileService, tagService,
                 roomService, guildConfigService);
         RoomManager roomManager = new RoomManager(roomService, proposalService, guildConfigService, messenger);
@@ -134,11 +140,12 @@ public class Main {
         RoomListener roomListener = new RoomListener(roomService, roomManager, guildConfigService);
         ReportListener reportListener = new ReportListener(roomService, proposalService, guildConfigService);
         MemberDataService memberDataService = new MemberDataService(profileService, activityService,
-                proposalService, roomService);
+                proposalService, roomService, blockService);
         MemberListener memberListener = new MemberListener(memberDataService, messenger, roomManager);
         MatchListener matchListener = new MatchListener(profileService, tagService, guildConfigService,
                 memberDataService, messenger);
         ResetListener resetListener = new ResetListener(proposalService, guildConfigService);
+        BlockListener blockListener = new BlockListener(blockService, guildConfigService, messenger);
         GuildDataRepository guildDataRepo = new SqliteGuildDataRepository(database);
         GuildDataService guildDataService = new GuildDataService(guildDataRepo);
         GuildListener guildListener = new GuildListener(guildDataService, proposalService, messenger);
@@ -158,7 +165,8 @@ public class Main {
                 .setHttpClientBuilder(new OkHttpClient.Builder().pingInterval(HTTP_PING_INTERVAL))
                 .addEventListeners(interactionTimer.arrivalListener())
                 .addEventListeners(activityListener, matchListener, adminListener, tagListener, proposalListener,
-                        memberListener, resetListener, configListener, roomListener, reportListener, guildListener)
+                        memberListener, resetListener, configListener, roomListener, reportListener, guildListener,
+                        blockListener)
                 .addEventListeners(interactionTimer.completionListener());
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
             Thread thread = new Thread(runnable, "matchmaking");

@@ -12,19 +12,22 @@ public class MemberDataService {
     private final ActivityService activityService;
     private final ProposalService proposalService;
     private final RoomService roomService;
+    private final BlockService blockService;
 
     public MemberDataService(ProfileService profileService, ActivityService activityService,
-            ProposalService proposalService, RoomService roomService) {
+            ProposalService proposalService, RoomService roomService, BlockService blockService) {
         this.profileService = profileService;
         this.activityService = activityService;
         this.proposalService = proposalService;
         this.roomService = roomService;
+        this.blockService = blockService;
     }
 
     public synchronized Forgotten forgetLeavingMember(long guildId, long userId) {
         List<Proposal> interrupted = this.proposalService.interruptAllFor(guildId, userId);
         List<Room> closed = this.roomService.closeAllFor(guildId, userId);
         this.deleteData(guildId, userId);
+        this.blockService.forgetBlocker(guildId, userId);
         return new Forgotten(interrupted, closed);
     }
 

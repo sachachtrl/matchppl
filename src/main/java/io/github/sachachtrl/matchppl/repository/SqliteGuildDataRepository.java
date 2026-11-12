@@ -16,7 +16,8 @@ public class SqliteGuildDataRepository implements GuildDataRepository {
             "DELETE FROM tag_role WHERE tag_id IN (SELECT id FROM tag WHERE guild_id = ?)",
             "DELETE FROM tag WHERE guild_id = ?",
             "DELETE FROM room WHERE guild_id = ?",
-            "DELETE FROM proposal WHERE guild_id = ?");
+            "DELETE FROM proposal WHERE guild_id = ?",
+            "DELETE FROM member_block WHERE guild_id = ?");
 
     private final Connection connection;
 

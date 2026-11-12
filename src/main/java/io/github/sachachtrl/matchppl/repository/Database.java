@@ -125,6 +125,15 @@ public class Database implements AutoCloseable {
                     CREATE INDEX IF NOT EXISTS room_by_status ON room (guild_id, open)
                     """);
             statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS member_block (
+                        guild_id   INTEGER NOT NULL,
+                        blocker_id INTEGER NOT NULL,
+                        blocked_id INTEGER NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        PRIMARY KEY (guild_id, blocker_id, blocked_id)
+                    )
+                    """);
+            statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS heartbeat (
                         id      INTEGER PRIMARY KEY CHECK (id = 1),
                         beat_at INTEGER NOT NULL

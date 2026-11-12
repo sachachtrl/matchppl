@@ -9,6 +9,7 @@ import io.github.sachachtrl.matchppl.model.ProposalStatus;
 import io.github.sachachtrl.matchppl.model.Tag;
 import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.InMemoryActivityRepository;
+import io.github.sachachtrl.matchppl.repository.SqliteBlockRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteGuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProfileRepository;
 import io.github.sachachtrl.matchppl.repository.SqliteProposalRepository;
@@ -40,6 +41,7 @@ class MemberDataServiceTest {
     private ProfileService profileService;
     private ProposalService proposalService;
     private RoomService roomService;
+    private BlockService blockService;
     private MemberDataService service;
 
     @BeforeEach
@@ -55,8 +57,9 @@ class MemberDataServiceTest {
                 new GuildConfigService(new SqliteGuildConfigRepository(this.database)), clock);
         this.proposalService = new ProposalService(new SqliteProposalRepository(this.database), this.profileService,
                 this.roomService, clock);
+        this.blockService = new BlockService(new SqliteBlockRepository(this.database), this.proposalService, clock);
         this.service = new MemberDataService(this.profileService, this.activityService, this.proposalService,
-                this.roomService);
+                this.roomService, this.blockService);
         Tag tag = ((TagService.Created) tagService.createTag(GUILD, "Fortnite", "🎮")).tag();
         for (long user : List.of(ALICE, BOB)) {
             this.profileService.setTags(new MemberSnapshot(GUILD, user, START, START, Set.of(), true),
@@ -108,6 +111,26 @@ class MemberDataServiceTest {
 
         assertTrue(forgotten.closedRooms().isEmpty());
         assertEquals(Set.of(ALICE, BOB), this.roomService.busyUsers(GUILD));
+    }
+
+    @Test
+    void leavingDeletesTheBlocksMadeByTheMemberButNotTheBlocksAgainstThem() {
+        this.blockService.block(GUILD, ALICE, BOB);
+        this.blockService.block(GUILD, BOB, ALICE);
+
+        this.service.forgetLeavingMember(GUILD, ALICE);
+
+        assertTrue(this.blockService.blockedMembers(GUILD, ALICE).isEmpty());
+        assertEquals(List.of(ALICE), this.blockService.blockedMembers(GUILD, BOB));
+    }
+
+    @Test
+    void aRequestKeepsTheMembersBlocks() {
+        this.blockService.block(GUILD, ALICE, BOB);
+
+        this.service.deleteOnRequest(GUILD, ALICE);
+
+        assertEquals(List.of(BOB), this.blockService.blockedMembers(GUILD, ALICE));
     }
 
     @Test
