@@ -310,7 +310,7 @@ public class SqliteProfileRepository implements ProfileRepository {
         }
     }
 
-    private static String context(long guildId, long userId) {
+    static String context(long guildId, long userId) {
         return "profile:" + guildId + ":" + userId;
     }
 

@@ -134,6 +134,12 @@ public class Database implements AutoCloseable {
                     )
                     """);
             statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS key_check (
+                        id    INTEGER PRIMARY KEY CHECK (id = 1),
+                        value TEXT NOT NULL
+                    )
+                    """);
+            statement.executeUpdate("""
                     CREATE TABLE IF NOT EXISTS heartbeat (
                         id      INTEGER PRIMARY KEY CHECK (id = 1),
                         beat_at INTEGER NOT NULL

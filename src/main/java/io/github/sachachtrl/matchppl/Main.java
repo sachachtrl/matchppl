@@ -24,6 +24,7 @@ import io.github.sachachtrl.matchppl.repository.Database;
 import io.github.sachachtrl.matchppl.repository.GuildConfigRepository;
 import io.github.sachachtrl.matchppl.repository.GuildDataRepository;
 import io.github.sachachtrl.matchppl.repository.HeartbeatRepository;
+import io.github.sachachtrl.matchppl.repository.KeyCheck;
 import io.github.sachachtrl.matchppl.repository.ProfileRepository;
 import io.github.sachachtrl.matchppl.repository.ProposalRepository;
 import io.github.sachachtrl.matchppl.repository.RoomRepository;
@@ -103,6 +104,12 @@ public class Main {
             database = new Database("jdbc:sqlite:matchppl.db");
         } catch (SQLException e) {
             log.error("Cannot open database: {}", e.getMessage());
+            System.exit(1);
+            return;
+        }
+        if (!new KeyCheck(database, cipher).matches()) {
+            log.error("PROFILE_KEY does not match the key used to encrypt this database: refusing to start so that "
+                    + "no introduction is lost. Put back the original key.");
             System.exit(1);
             return;
         }
