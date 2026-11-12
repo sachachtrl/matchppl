@@ -157,7 +157,9 @@ public class ResetListener extends ListenerAdapter {
         return Container.of(
                 TextDisplay.of("## " + title),
                 Separator.createDivider(Separator.Spacing.SMALL),
-                TextDisplay.of(explanation + "\n" + countText + "\n" + Messages.get(locale, "reset.irreversible")),
+                TextDisplay.of(explanation),
+                TextDisplay.of(countText),
+                TextDisplay.of(Messages.get(locale, "reset.irreversible")),
                 Separator.createDivider(Separator.Spacing.LARGE),
                 ActionRow.of(confirm, Button.secondary(CANCEL, Messages.get(locale, "reset.cancel")))
         ).withAccentColor(color);

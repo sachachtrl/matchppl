@@ -27,11 +27,11 @@ final class AdminViews {
     private AdminViews() {
     }
 
-    static Container listCard(Guild guild, Set<Long> adminRoleIds, String note, Locale locale) {
+    static Container listCard(Guild guild, Set<Long> adminRoleIds, List<String> notes, Locale locale) {
         List<ContainerChildComponent> children = new ArrayList<>();
         children.add(TextDisplay.of("## " + Messages.get(locale, "admin.title") + "\n-# "
                 + Messages.get(locale, "adminlist.subtitle")));
-        if (note != null) {
+        for (String note : notes) {
             children.add(TextDisplay.of("-# " + note));
         }
         List<Long> sorted = sortByPosition(guild, adminRoleIds);

@@ -74,7 +74,7 @@ public class AdminListener extends ListenerAdapter {
             return;
         }
         if (commandName.equals(LIST_ADMIN_COMMAND)) {
-            event.replyComponents(this.listView(guild, null, locale))
+            event.replyComponents(this.listView(guild, List.of(), locale))
                     .useComponentsV2()
                     .setEphemeral(true)
                     .queue();
@@ -135,7 +135,7 @@ public class AdminListener extends ListenerAdapter {
         } else {
             note = Messages.format(locale, "adminlist.note.already_removed", mention);
         }
-        event.editComponents(this.listView(guild, note, locale)).useComponentsV2().queue();
+        event.editComponents(this.listView(guild, List.of(note), locale)).useComponentsV2().queue();
     }
 
     @Override
@@ -173,12 +173,11 @@ public class AdminListener extends ListenerAdapter {
         if (everyoneRefused) {
             notes.add(Messages.get(locale, "admin.everyone"));
         }
-        String note = notes.isEmpty() ? null : String.join("\n-# ", notes);
-        event.editComponents(this.listView(guild, note, locale)).useComponentsV2().queue();
+        event.editComponents(this.listView(guild, notes, locale)).useComponentsV2().queue();
     }
 
-    private Container listView(Guild guild, String note, Locale locale) {
-        return AdminViews.listCard(guild, this.guildConfigService.listAdminRoles(guild.getIdLong()), note, locale);
+    private Container listView(Guild guild, List<String> notes, Locale locale) {
+        return AdminViews.listCard(guild, this.guildConfigService.listAdminRoles(guild.getIdLong()), notes, locale);
     }
 
     private boolean canManage(IReplyCallback event, Member member, Locale locale) {
