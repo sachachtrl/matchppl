@@ -16,6 +16,7 @@ import io.github.sachachtrl.matchppl.repository.TextCipher;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,6 +97,18 @@ class RoomServiceTest {
         this.service.close(first.id());
 
         assertEquals(1, this.open(EVE, ALICE).number());
+    }
+
+    @Test
+    void roomsLeftWithoutChannelsAfterARestartAreClosed() {
+        Room unfinished = this.open(ALICE, BOB);
+        Room finished = this.open(CAROL, DAVE);
+        this.service.attachChannels(finished.id(), 100L, 101L);
+
+        List<Room> closed = this.service.closeUnfinished();
+
+        assertEquals(List.of(unfinished.id()), closed.stream().map(Room::id).toList());
+        assertEquals(Set.of(CAROL, DAVE), this.service.busyUsers(GUILD));
     }
 
     @Test

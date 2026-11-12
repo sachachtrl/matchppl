@@ -100,6 +100,16 @@ public class RoomService {
         return closed;
     }
 
+    public synchronized List<Room> closeUnfinished() {
+        List<Room> closed = new ArrayList<>();
+        for (Room room : this.roomRepo.findOpenWithoutChannels()) {
+            if (this.close(room.id())) {
+                closed.add(room);
+            }
+        }
+        return closed;
+    }
+
     public synchronized List<Room> remindersDue() {
         return this.roomRepo.findReminderDue(this.clock.instant(), REMINDER_NOTICE).stream()
                 .filter(room -> this.roomRepo.markReminderSent(room.id()))

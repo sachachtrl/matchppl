@@ -47,6 +47,10 @@ public class SqliteRoomRepository implements RoomRepository {
             FROM room
             WHERE open = 1 AND delete_at <= ?
             """;
+    private static final String FIND_UNFINISHED_SQL = "SELECT " + COLUMNS + """
+            FROM room
+            WHERE open = 1 AND text_channel_id IS NULL
+            """;
     private static final String FIND_REMINDER_DUE_SQL = "SELECT " + COLUMNS + """
             FROM room
             WHERE open = 1 AND reminder_sent = 0 AND delete_at - ? <= ? AND delete_at > ?
@@ -188,6 +192,17 @@ public class SqliteRoomRepository implements RoomRepository {
                 return readRooms(statement);
             } catch (SQLException e) {
                 throw new RepositoryException("Failed to find due rooms", e);
+            }
+        }
+    }
+
+    @Override
+    public List<Room> findOpenWithoutChannels() {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(FIND_UNFINISHED_SQL)) {
+                return readRooms(statement);
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to find unfinished rooms", e);
             }
         }
     }

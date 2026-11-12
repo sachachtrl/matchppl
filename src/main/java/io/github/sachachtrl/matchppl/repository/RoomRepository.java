@@ -26,6 +26,8 @@ public interface RoomRepository {
 
     List<Room> findDue(Instant now);
 
+    List<Room> findOpenWithoutChannels();
+
     List<Room> findReminderDue(Instant now, Duration notice);
 
     void setChannels(long roomId, long textChannelId, long voiceChannelId);

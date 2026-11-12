@@ -17,6 +17,7 @@ import io.github.sachachtrl.matchppl.discord.RoomListener;
 import io.github.sachachtrl.matchppl.discord.RoomManager;
 import io.github.sachachtrl.matchppl.discord.TagListener;
 import io.github.sachachtrl.matchppl.model.Proposal;
+import io.github.sachachtrl.matchppl.model.Room;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
 import io.github.sachachtrl.matchppl.repository.BlockRepository;
 import io.github.sachachtrl.matchppl.repository.Database;
@@ -157,6 +158,11 @@ public class Main {
         List<Proposal> interrupted = heartbeatService.recoverFromDowntime();
         downtime.ifPresent(gap -> log.warn("Bot was offline for {} min: {} ongoing proposals interrupted",
                 gap.toMinutes(), interrupted.size()));
+        List<Room> unfinishedRooms = roomService.closeUnfinished();
+        if (!unfinishedRooms.isEmpty()) {
+            log.warn("{} matches had no channel yet when the bot stopped: members were put in touch directly",
+                    unfinishedRooms.size());
+        }
 
         JDABuilder builder = JDABuilder.createLight(token, GatewayIntent.GUILD_MESSAGES)
                 .enableIntents(GatewayIntent.GUILD_MEMBERS)
@@ -179,6 +185,9 @@ public class Main {
             bot.awaitReady();
             for (Proposal proposal : interrupted) {
                 messenger.showInterrupted(bot, proposal);
+            }
+            for (Room room : unfinishedRooms) {
+                roomManager.remove(bot, room);
             }
             bot.updateCommands().addCommands(BotCommands.all()).queue();
             scheduler.scheduleAtFixedRate(new MatchmakingTask(bot, proposalService, matchmakingService, roomService,
