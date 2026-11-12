@@ -2,6 +2,7 @@ package io.github.sachachtrl.matchppl.discord;
 
 import io.github.sachachtrl.matchppl.model.GuildSettings;
 import io.github.sachachtrl.matchppl.service.GuildConfigService;
+import io.github.sachachtrl.matchppl.service.ProfileService;
 
 import java.time.Duration;
 import java.util.List;
@@ -37,9 +38,11 @@ public class ConfigListener extends ListenerAdapter {
     private static final int DURATION_INPUT_LENGTH = 16;
 
     private final GuildConfigService guildConfigService;
+    private final ProfileService profileService;
 
-    public ConfigListener(GuildConfigService guildConfigService) {
+    public ConfigListener(GuildConfigService guildConfigService, ProfileService profileService) {
         this.guildConfigService = guildConfigService;
+        this.profileService = profileService;
     }
 
     public static SlashCommandData command() {
@@ -88,6 +91,14 @@ public class ConfigListener extends ListenerAdapter {
                 this.logChange(guild, member, "roomsEnabled", String.valueOf(enabled));
                 this.refresh(event, guild, locale);
             }
+            case ConfigViews.STOP_ALL -> event.editComponents(ConfigViews.stopAllConfirmation(
+                    this.profileService.countSearching(guild.getIdLong()), locale)).useComponentsV2().queue();
+            case ConfigViews.STOP_ALL_CONFIRM -> {
+                int stopped = this.profileService.stopAllSearches(guild.getIdLong());
+                this.logChange(guild, member, "stopAllSearches", String.valueOf(stopped));
+                event.editComponents(ConfigViews.stopAllDone(stopped, locale)).useComponentsV2().queue();
+            }
+            case ConfigViews.BACK -> this.refresh(event, guild, locale);
             default -> {
             }
         }
@@ -212,7 +223,9 @@ public class ConfigListener extends ListenerAdapter {
     }
 
     private Container view(Guild guild, Locale locale) {
-        return ConfigViews.card(this.guildConfigService.settings(guild.getIdLong()), locale);
+        long guildId = guild.getIdLong();
+        return ConfigViews.card(this.guildConfigService.settings(guildId), this.profileService.countSearching(guildId),
+                locale);
     }
 
     private void refresh(IMessageEditCallback event, Guild guild, Locale locale) {

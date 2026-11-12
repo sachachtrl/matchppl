@@ -9,6 +9,10 @@ public interface ProfileRepository {
 
     List<Profile> findSearching(long guildId);
 
+    int countSearching(long guildId);
+
+    int stopAllSearches(long guildId);
+
     void save(Profile profile);
 
     void delete(long guildId, long userId);

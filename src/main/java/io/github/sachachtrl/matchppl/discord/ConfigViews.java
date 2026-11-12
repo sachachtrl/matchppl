@@ -23,11 +23,14 @@ final class ConfigViews {
     static final String ROOM_PREFIX = PREFIX + "roomprefix";
     static final String CATEGORY = PREFIX + "category";
     static final String LOG_CHANNEL = PREFIX + "logchannel";
+    static final String STOP_ALL = PREFIX + "stopall";
+    static final String STOP_ALL_CONFIRM = PREFIX + "stopall:confirm";
+    static final String BACK = PREFIX + "back";
 
     private ConfigViews() {
     }
 
-    static Container card(GuildSettings settings, Locale locale) {
+    static Container card(GuildSettings settings, int searchingCount, Locale locale) {
         return Container.of(
                 TextDisplay.of("## " + Messages.get(locale, "config.title") + "\n-# "
                         + Messages.get(locale, "config.subtitle")),
@@ -53,8 +56,43 @@ final class ConfigViews {
                 TextDisplay.of("**" + Messages.get(locale, "config.log_channel.title") + "**\n-# "
                         + Messages.get(locale, "config.log_channel.hint")),
                 ActionRow.of(channelSelect(LOG_CHANNEL, ChannelType.TEXT, settings.logChannelId(),
-                        Messages.get(locale, "config.log_channel.placeholder")))
+                        Messages.get(locale, "config.log_channel.placeholder"))),
+                Separator.createDivider(Separator.Spacing.SMALL),
+                Section.of(
+                        Button.danger(STOP_ALL, Messages.get(locale, "config.stop_all.button"))
+                                .withDisabled(searchingCount == 0),
+                        TextDisplay.of("**" + Messages.get(locale, "config.stop_all.title") + "**\n-# "
+                                + countText(locale, "config.stop_all.value", searchingCount)))
         ).withAccentColor(Cards.NEUTRAL_COLOR);
+    }
+
+    static Container stopAllConfirmation(int searchingCount, Locale locale) {
+        return Container.of(
+                TextDisplay.of("## " + Messages.get(locale, "config.stop_all.confirm.title")),
+                Separator.createDivider(Separator.Spacing.SMALL),
+                TextDisplay.of(Messages.get(locale, "config.stop_all.confirm.explanation")),
+                TextDisplay.of("-# " + countText(locale, "config.stop_all.confirm.count", searchingCount)),
+                TextDisplay.of("-# " + Messages.get(locale, "config.stop_all.confirm.undo")),
+                Separator.createDivider(Separator.Spacing.LARGE),
+                ActionRow.of(
+                        Button.danger(STOP_ALL_CONFIRM, Messages.get(locale, "config.stop_all.button")),
+                        Button.secondary(BACK, Messages.get(locale, "config.button.cancel")))
+        ).withAccentColor(Cards.ERROR_COLOR);
+    }
+
+    static Container stopAllDone(int stoppedCount, Locale locale) {
+        return Container.of(
+                TextDisplay.of("## " + Messages.get(locale, "config.stop_all.done.title")),
+                TextDisplay.of(countText(locale, "config.stop_all.done", stoppedCount)),
+                Separator.createDivider(Separator.Spacing.LARGE),
+                ActionRow.of(Button.secondary(BACK, Messages.get(locale, "config.button.back")))
+        ).withAccentColor(Cards.SUCCESS_COLOR);
+    }
+
+    private static String countText(Locale locale, String keyPrefix, int count) {
+        return count == 1
+                ? Messages.get(locale, keyPrefix + ".one")
+                : Messages.format(locale, keyPrefix + ".other", count);
     }
 
     private static Section editSection(String id, String keyPrefix, Duration value, Locale locale) {

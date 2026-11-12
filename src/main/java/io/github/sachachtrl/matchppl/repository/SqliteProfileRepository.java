@@ -64,6 +64,12 @@ public class SqliteProfileRepository implements ProfileRepository {
     private static final String FIND_SEARCHING_SQL = """
             SELECT user_id FROM profile WHERE guild_id = ? AND searching = 1
             """;
+    private static final String COUNT_SEARCHING_SQL = """
+            SELECT COUNT(*) FROM profile WHERE guild_id = ? AND searching = 1
+            """;
+    private static final String STOP_ALL_SQL = """
+            UPDATE profile SET searching = 0, waiting_since = NULL WHERE guild_id = ? AND searching = 1
+            """;
     private static final String DELETE_SQL = """
             DELETE FROM profile WHERE guild_id = ? AND user_id = ?
             """;
@@ -141,6 +147,33 @@ public class SqliteProfileRepository implements ProfileRepository {
                 throw new RepositoryException("Failed to list searching profiles", e);
             }
             return userIds.stream().map(userId -> this.find(guildId, userId)).toList();
+        }
+    }
+
+    @Override
+    public int countSearching(long guildId) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(COUNT_SEARCHING_SQL)) {
+                statement.setLong(1, guildId);
+                try (ResultSet result = statement.executeQuery()) {
+                    result.next();
+                    return result.getInt(1);
+                }
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to count searching profiles", e);
+            }
+        }
+    }
+
+    @Override
+    public int stopAllSearches(long guildId) {
+        synchronized (this.connection) {
+            try (PreparedStatement statement = this.connection.prepareStatement(STOP_ALL_SQL)) {
+                statement.setLong(1, guildId);
+                return statement.executeUpdate();
+            } catch (SQLException e) {
+                throw new RepositoryException("Failed to stop all searches", e);
+            }
         }
     }
 

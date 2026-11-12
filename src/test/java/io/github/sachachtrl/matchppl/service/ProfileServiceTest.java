@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,6 +75,25 @@ class ProfileServiceTest {
 
         assertTrue(this.service.setSearching(GUILD, USER, true));
         assertTrue(this.service.getProfile(GUILD, USER).searching());
+    }
+
+    @Test
+    void anAdminCanStopTheSearchOfEveryMemberOfOneServer() {
+        long otherGuild = 2L;
+        for (MemberSnapshot member : List.of(MEMBER, new MemberSnapshot(GUILD, USER + 1, NOW, NOW, Set.of(), true))) {
+            this.service.setTags(member, Set.of(this.finals.id()));
+            this.service.setSearching(GUILD, member.userId(), true);
+        }
+        Tag otherTag = ((TagService.Created) this.tagService.createTag(otherGuild, "Lille", "🏙️")).tag();
+        this.service.setTags(new MemberSnapshot(otherGuild, USER, NOW, NOW, Set.of(), true), Set.of(otherTag.id()));
+        this.service.setSearching(otherGuild, USER, true);
+        assertEquals(2, this.service.countSearching(GUILD));
+
+        assertEquals(2, this.service.stopAllSearches(GUILD));
+
+        assertEquals(0, this.service.countSearching(GUILD));
+        assertNull(this.service.getProfile(GUILD, USER).waitingSince());
+        assertEquals(1, this.service.countSearching(otherGuild));
     }
 
     @Test

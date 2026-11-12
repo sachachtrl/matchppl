@@ -103,7 +103,6 @@ public class Main {
         GuildConfigRepository guildConfigRepo = new SqliteGuildConfigRepository(database);
         GuildConfigService guildConfigService = new GuildConfigService(guildConfigRepo);
         AdminListener adminListener = new AdminListener(guildConfigService);
-        ConfigListener configListener = new ConfigListener(guildConfigService);
 
         TagRepository tagRepo = new SqliteTagRepository(database);
         TagService tagService = new TagService(tagRepo, conditionChecker);
@@ -112,6 +111,7 @@ public class Main {
         ProfileRepository profileRepo = new SqliteProfileRepository(database, cipher);
         ProfileService profileService = new ProfileService(profileRepo, tagService, clock);
         MatchListener matchListener = new MatchListener(profileService, tagService);
+        ConfigListener configListener = new ConfigListener(guildConfigService, profileService);
 
         ProposalRepository proposalRepo = new SqliteProposalRepository(database);
         RoomRepository roomRepo = new SqliteRoomRepository(database);

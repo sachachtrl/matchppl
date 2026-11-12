@@ -51,6 +51,14 @@ public class ProfileService {
         return this.profileRepo.findSearching(guildId);
     }
 
+    public int countSearching(long guildId) {
+        return this.profileRepo.countSearching(guildId);
+    }
+
+    public int stopAllSearches(long guildId) {
+        return this.profileRepo.stopAllSearches(guildId);
+    }
+
     public void markUnreachable(long guildId, long userId) {
         Profile profile = this.profileRepo.find(guildId, userId);
         this.profileRepo.save(profile.withSearching(false, null).withDmUnreachable(true));
