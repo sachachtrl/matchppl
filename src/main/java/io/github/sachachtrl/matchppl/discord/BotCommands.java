@@ -26,6 +26,7 @@ public final class BotCommands {
                         BlockListener.blockCommand(),
                         BlockListener.unblockCommand(),
                         BlockListener.blockListCommand(),
+                        HelpListener.command(),
                         ConfigListener.command())
                 .stream()
                 .map(BotCommands::localize)

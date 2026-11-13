@@ -6,6 +6,7 @@ import io.github.sachachtrl.matchppl.discord.BlockListener;
 import io.github.sachachtrl.matchppl.discord.BotCommands;
 import io.github.sachachtrl.matchppl.discord.ConfigListener;
 import io.github.sachachtrl.matchppl.discord.GuildListener;
+import io.github.sachachtrl.matchppl.discord.HelpListener;
 import io.github.sachachtrl.matchppl.discord.InteractionTimer;
 import io.github.sachachtrl.matchppl.discord.MatchListener;
 import io.github.sachachtrl.matchppl.discord.MemberListener;
@@ -16,6 +17,7 @@ import io.github.sachachtrl.matchppl.discord.ResetListener;
 import io.github.sachachtrl.matchppl.discord.RoomListener;
 import io.github.sachachtrl.matchppl.discord.RoomManager;
 import io.github.sachachtrl.matchppl.discord.TagListener;
+import io.github.sachachtrl.matchppl.discord.WelcomeListener;
 import io.github.sachachtrl.matchppl.model.Proposal;
 import io.github.sachachtrl.matchppl.model.Room;
 import io.github.sachachtrl.matchppl.repository.ActivityRepository;
@@ -158,6 +160,8 @@ public class Main {
         GuildDataRepository guildDataRepo = new SqliteGuildDataRepository(database);
         GuildDataService guildDataService = new GuildDataService(guildDataRepo);
         GuildListener guildListener = new GuildListener(guildDataService, proposalService, messenger);
+        WelcomeListener welcomeListener = new WelcomeListener();
+        HelpListener helpListener = new HelpListener(guildConfigService);
         InteractionTimer interactionTimer = new InteractionTimer(clock);
 
         HeartbeatRepository heartbeatRepo = new SqliteHeartbeatRepository(database);
@@ -181,7 +185,7 @@ public class Main {
                 .addEventListeners(interactionTimer.arrivalListener())
                 .addEventListeners(activityListener, matchListener, adminListener, tagListener, proposalListener,
                         memberListener, resetListener, configListener, roomListener, reportListener, guildListener,
-                        blockListener)
+                        blockListener, welcomeListener, helpListener)
                 .addEventListeners(interactionTimer.completionListener());
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
             Thread thread = new Thread(runnable, "matchmaking");
