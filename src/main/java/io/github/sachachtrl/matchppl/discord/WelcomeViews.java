@@ -26,7 +26,6 @@ final class WelcomeViews {
         children.add(Separator.createDivider(Separator.Spacing.SMALL));
         children.add(TextDisplay.of("**" + Messages.get(locale, "welcome.members.title") + "**\n"
                 + Messages.get(locale, "welcome.members.text")));
-        children.add(TextDisplay.of("-# " + Messages.get(locale, "welcome.language")));
         return Container.of(children).withAccentColor(Cards.NEUTRAL_COLOR);
     }
 }
