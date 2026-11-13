@@ -43,6 +43,7 @@ import io.github.sachachtrl.matchppl.repository.TagRepository;
 import io.github.sachachtrl.matchppl.repository.TextCipher;
 import io.github.sachachtrl.matchppl.scheduler.ActivityPurgeTask;
 import io.github.sachachtrl.matchppl.scheduler.MatchmakingTask;
+import io.github.sachachtrl.matchppl.scheduler.PresenceTask;
 import io.github.sachachtrl.matchppl.service.ActivityService;
 import io.github.sachachtrl.matchppl.service.BlockService;
 import io.github.sachachtrl.matchppl.service.ConditionChecker;
@@ -69,6 +70,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
@@ -86,6 +88,7 @@ public class Main {
     private static final long FIRST_ROUND_DELAY_SECONDS = 10;
     private static final long ROUND_PERIOD_SECONDS = 60;
     private static final long PURGE_PERIOD_HOURS = 24;
+    private static final long STATUS_PERIOD_MINUTES = 2;
 
     public void main() throws InterruptedException {
         Dotenv env = Dotenv.configure().ignoreIfMissing().load();
@@ -208,6 +211,9 @@ public class Main {
                     FIRST_ROUND_DELAY_SECONDS, ROUND_PERIOD_SECONDS, TimeUnit.SECONDS);
             scheduler.scheduleAtFixedRate(new ActivityPurgeTask(activityService, clock), 0, PURGE_PERIOD_HOURS,
                     TimeUnit.HOURS);
+            scheduler.scheduleAtFixedRate(new PresenceTask(PresenceTask.loadStatuses(),
+                            status -> bot.getPresence().setActivity(Activity.customStatus(status))),
+                    0, STATUS_PERIOD_MINUTES, TimeUnit.MINUTES);
             log.info("Bot is logged in as {}", bot.getSelfUser().getAsTag());
         } catch (InvalidTokenException e) {
             log.error("Invalid token: {}", e.getMessage());
